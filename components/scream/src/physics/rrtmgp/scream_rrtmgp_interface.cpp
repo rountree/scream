@@ -6,7 +6,7 @@ namespace scream {
          * Define some dummy routines so we can start working on the interface
          * between SCREAM and RRTMGP
          */
-        void rrtmgp_init() {}
+        void rrtmgp_initialize() {}
         void rrtmgp_finalize() {}
         void rrtmgp_main() {}
     }  // namespace rrtmgp

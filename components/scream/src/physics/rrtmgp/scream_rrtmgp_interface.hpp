@@ -11,14 +11,14 @@ namespace scream {
          * API for RRTMGP, we should be able to do away with these.
          */
         extern "C" {
-            void rrtmgp_init_f90();
+            void rrtmgp_initialize_f90();
             void rrtmgp_main_f90();
             void rrtmgp_finalize_f90();
         }  // extern "C"
         /*
          * Assuming we can jump directly to using a C++ API...
          */
-        extern void rrtmgp_init();
+        extern void rrtmgp_initialize();
         extern void rrtmgp_main();
         extern void rrtmgp_finalize();
     } // namespace rrtmgp
