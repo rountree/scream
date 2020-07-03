@@ -1,4 +1,5 @@
 #include "scream_rrtmgp_interface.hpp"
+#include "mo_load_coefficients.h"
 
 namespace scream {
     namespace rrtmgp {
