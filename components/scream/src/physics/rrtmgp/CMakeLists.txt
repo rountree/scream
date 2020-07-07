@@ -1,5 +1,12 @@
-# Add RRTMGP source files. Right now, this builds the Fortran source for RRTMGP.
-# Once the C++ port of RRTMGP is complete we should switch over to that.
+# RRTMGP++ requires YAKL
+add_subdirectory(${SCREAM_BASE_DIR}/../../externals/yakl ${CMAKE_CURRENT_BINARY_DIR}/yakl_build)
+target_compile_options(yakl PUBLIC $<$<COMPILE_LANGUAGE:Fortran>:-fno-default-real-8 -fno-default-double-8>)
+target_compile_options(yakl PUBLIC $<$<COMPILE_LANGUAGE:CXX>:-std=c++14>)
+set_target_properties(yakl PROPERTIES CXX_STANDARD 14)
+#add_library(yakl STATIC IMPORTED)
+
+
+# Add RRTMGP source files.
 set(RRTMGP_SRCS
   atmosphere_radiation.cpp
   rrtmgp.cpp
@@ -30,7 +37,33 @@ set(RRTMGP_SRCS
 )
 set_source_files_properties(${RRTMGP_SRCS} PROPERTIES COMPILE_FLAGS "-std=c++14")
 
+set(RRTMGP_HEADERS
+  rrtmgp.hpp
+  scream_rrtmgp_interface.hpp
+  atmosphere_radiation.hpp
+)
 
+add_library(rrtmgp ${RRTMGP_SRCS})
+set_source_files_properties(${RRTMGP_SRCS} PROPERTIES COMPILE_FLAGS "${YAKL_CXX_FLAGS}")
+target_include_directories(rrtmgp PUBLIC ${SCREAM_INCLUDE_DIRS})
+target_include_directories(rrtmgp PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../common)
+target_include_directories(rrtmgp SYSTEM PUBLIC ${SCREAM_TPL_INCLUDE_DIRS} ${CIMEROOT}/src/share/include)
+target_include_directories(rrtmgp PUBLIC ${SCREAM_BASE_DIR}/../cam/src/physics/rrtmgp/external/cpp)
+target_include_directories(rrtmgp PUBLIC ${SCREAM_BASE_DIR}/../cam/src/physics/rrtmgp/external/cpp/rte)
+target_include_directories(rrtmgp PUBLIC ${SCREAM_BASE_DIR}/../cam/src/physics/rrtmgp/external/cpp/rte/kernels)
+target_include_directories(rrtmgp PUBLIC ${SCREAM_BASE_DIR}/../cam/src/physics/rrtmgp/external/cpp/rrtmgp)
+target_include_directories(rrtmgp PUBLIC ${SCREAM_BASE_DIR}/../cam/src/physics/rrtmgp/external/cpp/rrtmgp/kernels)
+target_include_directories(rrtmgp PUBLIC ${SCREAM_BASE_DIR}/../cam/src/physics/rrtmgp/external/cpp/examples)
+target_include_directories(rrtmgp PUBLIC ${SCREAM_BASE_DIR}/../../externals/yakl)
+set_target_properties(rrtmgp PROPERTIES Fortran_MODULE_DIRECTORY ${SCREAM_F90_MODULES})
+set_target_properties(rrtmgp PROPERTIES CXX_STANDARD 14)
+target_link_libraries(rrtmgp yakl physics_common scream_share ${SCREAM_TPL_LIBRARIES})
+
+if (NOT SCREAM_LIB_ONLY)
+  add_subdirectory(tests)
+endif()
+
+# Old sources for Fortran code
 set(RRTMGP_FORTRAN_SRC
   scream_rrtmgp_interface.F90
   ${SCREAM_BASE_DIR}/../eam/src/physics/rrtmgp/external/rrtmgp/kernels/mo_gas_optics_kernels.F90
@@ -57,8 +90,6 @@ set(RRTMGP_FORTRAN_SRC
   ${SCREAM_BASE_DIR}/../eam/src/physics/rrtmgp/external/extensions/mo_heating_rates.F90
   ${SCREAM_BASE_DIR}/../eam/src/physics/rrtmgp/external/extensions/mo_rrtmgp_clr_all_sky.F90
 )
-
-#add_library(yakl STATIC IMPORTED)
 
 set(RRTMGP_HEADERS
   rrtmgp.hpp
@@ -90,4 +121,3 @@ target_link_libraries(rrtmgp physics_common scream_share ${SCREAM_TPL_LIBRARIES}
 if (NOT SCREAM_LIB_ONLY)
   add_subdirectory(tests)
 endif()
-
