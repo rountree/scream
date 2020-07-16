@@ -27,7 +27,8 @@ set(RRTMGP_SRCS
   ${SCREAM_BASE_DIR}/../cam/src/physics/rrtmgp/external/cpp/rte/kernels/mo_fluxes_broadband_kernels.cpp
   ${SCREAM_BASE_DIR}/../cam/src/physics/rrtmgp/external/cpp/rte/kernels/mo_optical_props_kernels.cpp
   ${SCREAM_BASE_DIR}/../cam/src/physics/rrtmgp/external/cpp/rte/kernels/mo_rte_solver_kernels.cpp
-  ${SCREAM_BASE_DIR}/../cam/src/physics/rrtmgp/external/cpp/examples/mo_load_coefficients.cpp
+  #${SCREAM_BASE_DIR}/../cam/src/physics/rrtmgp/external/cpp/examples/mo_load_coefficients.cpp
+  mo_load_coefficients.cpp
   ${SCREAM_BASE_DIR}/../cam/src/physics/rrtmgp/external/cpp/const.h
   #${SCREAM_BASE_DIR}/../cam/src/physics/rrtmgp/external/cpp/extensions/mo_fluxes_byband.cpp
   #${SCREAM_BASE_DIR}/../cam/src/physics/rrtmgp/external/cpp/extensions/mo_fluxes_byband_kernels.cpp
