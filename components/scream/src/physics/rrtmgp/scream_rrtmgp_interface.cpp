@@ -43,11 +43,15 @@ namespace scream {
             GasOpticsRRTMGP k_dist_sw;
             std::string coefficients_file_sw = "./data/rrtmgp-data-sw-g224-2018-12-04.nc";
             std::string coefficients_file_lw = "./data/rrtmgp-data-lw-g256-2018-12-04.nc";
-            //load_and_init(k_dist_sw, coefficients_file_sw, gas_concs);
+            load_and_init(k_dist_sw, coefficients_file_sw, gas_concs);
 
             // Verify that we loaded absorption coefficient data properly
+            //std::cout << k_dist_sw.press_ref << "\n";
         }
+
         void rrtmgp_finalize() {}
+
         void rrtmgp_main() {}
+
     }  // namespace rrtmgp
 }  // namespace scream

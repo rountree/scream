@@ -1,6 +1,6 @@
-
 #include "mo_load_coefficients.h"
 #include "YAKL_netcdf.h"
+#include "netcdf.h"
 
 // This code is part of RRTM for GCM Applications - Parallel (RRTMGP)
 //
@@ -115,5 +115,3 @@ void load_and_init(GasOpticsRRTMGP &kdist, std::string filename, GasConcs const 
   }
   io.close();
 }
-
-
