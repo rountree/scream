@@ -2,19 +2,18 @@
 #define SCREAM_RRTMGP_INTERFACE_HPP
 
 #include "ekat/ekat_assert.hpp"
+#include "mo_gas_optics_rrtmgp.h"
 
 namespace scream {
     namespace rrtmgp {
         /* 
-         * These may or may not be needed to interface with the fortran code.
-         * If we jump directly to the C++ version of RRTMGP, or use the C++
-         * API for RRTMGP, we should be able to do away with these.
+         * Objects containing k-distribution information need to be initialized
+         * once and then persist throughout the life of the program, so we
+         * declare them here within the rrtmgp namespace.
          */
-        extern "C" {
-            void rrtmgp_initialize_f90();
-            void rrtmgp_main_f90();
-            void rrtmgp_finalize_f90();
-        }  // extern "C"
+        extern GasOpticsRRTMGP k_dist_sw;
+        extern GasOpticsRRTMGP k_dist_lw;
+
         /*
          * Assuming we can jump directly to using a C++ API...
          */

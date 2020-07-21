@@ -3,8 +3,6 @@ add_subdirectory(${SCREAM_BASE_DIR}/../../externals/yakl ${CMAKE_CURRENT_BINARY_
 target_compile_options(yakl PUBLIC $<$<COMPILE_LANGUAGE:Fortran>:-fno-default-real-8 -fno-default-double-8>)
 target_compile_options(yakl PUBLIC $<$<COMPILE_LANGUAGE:CXX>:-std=c++14>)
 set_target_properties(yakl PROPERTIES CXX_STANDARD 14)
-#add_library(yakl STATIC IMPORTED)
-
 
 # Add RRTMGP source files.
 set(RRTMGP_SRCS
@@ -36,7 +34,6 @@ set(RRTMGP_SRCS
   #${SCREAM_BASE_DIR}/../cam/src/physics/rrtmgp/external/cpp/extensions/mo_heating_rates.cpp
   #${SCREAM_BASE_DIR}/../cam/src/physics/rrtmgp/external/cpp/extensions/mo_rrtmgp_clr_all_sky.cpp
 )
-set_source_files_properties(${RRTMGP_SRCS} PROPERTIES COMPILE_FLAGS "-std=c++14")
 
 set(RRTMGP_HEADERS
   rrtmgp.hpp
