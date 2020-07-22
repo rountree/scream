@@ -1,17 +1,7 @@
 #include "catch2/catch.hpp"
-#include "physics/rrtmgp/rrtmgp.hpp"
 #include "physics/rrtmgp/scream_rrtmgp_interface.hpp"
 #include "netcdf.h"
 namespace {
-
-    TEST_CASE("rrtmgp", "stub") {
-      int val = scream::rrtmgp::rrtmgp_stub();
-      REQUIRE(val == 42);
-    }
-
-    TEST_CASE("rrtmgp_read_scorpio", "") {
-        REQUIRE(1 == 1);
-    }
 
     TEST_CASE("rrtmgp_read_netcdf", "") {
 

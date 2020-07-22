@@ -7,7 +7,6 @@ set_target_properties(yakl PROPERTIES CXX_STANDARD 14)
 # Add RRTMGP source files.
 set(RRTMGP_SRCS
   atmosphere_radiation.cpp
-  rrtmgp.cpp
   scream_rrtmgp_interface.cpp
   ${SCREAM_BASE_DIR}/../cam/src/physics/rrtmgp/external/cpp/rrtmgp/kernels/mo_gas_optics_kernels.cpp
   ${SCREAM_BASE_DIR}/../cam/src/physics/rrtmgp/external/cpp/rrtmgp/kernels/mo_rrtmgp_util_reorder_kernels.h
