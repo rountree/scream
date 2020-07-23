@@ -9,29 +9,14 @@ set(RRTMGP_SRCS
   atmosphere_radiation.cpp
   scream_rrtmgp_interface.cpp
   ${SCREAM_BASE_DIR}/../cam/src/physics/rrtmgp/external/cpp/rrtmgp/kernels/mo_gas_optics_kernels.cpp
-  ${SCREAM_BASE_DIR}/../cam/src/physics/rrtmgp/external/cpp/rrtmgp/kernels/mo_rrtmgp_util_reorder_kernels.h
-  ${SCREAM_BASE_DIR}/../cam/src/physics/rrtmgp/external/cpp/rrtmgp/mo_gas_concentrations.h
-  ${SCREAM_BASE_DIR}/../cam/src/physics/rrtmgp/external/cpp/rrtmgp/mo_gas_optics_rrtmgp.h
   ${SCREAM_BASE_DIR}/../cam/src/physics/rrtmgp/external/cpp/rrtmgp/mo_rrtmgp_constants.cpp
   ${SCREAM_BASE_DIR}/../cam/src/physics/rrtmgp/external/cpp/rrtmgp/mo_rrtmgp_util_reorder.cpp
-  ${SCREAM_BASE_DIR}/../cam/src/physics/rrtmgp/external/cpp/rrtmgp/mo_rrtmgp_util_string.h
-  ${SCREAM_BASE_DIR}/../cam/src/physics/rrtmgp/external/cpp/rte/mo_fluxes.h
-  ${SCREAM_BASE_DIR}/../cam/src/physics/rrtmgp/external/cpp/rte/mo_optical_props.h
   ${SCREAM_BASE_DIR}/../cam/src/physics/rrtmgp/external/cpp/rte/mo_rte_lw.cpp
   ${SCREAM_BASE_DIR}/../cam/src/physics/rrtmgp/external/cpp/rte/mo_rte_sw.cpp
-  #${SCREAM_BASE_DIR}/../cam/src/physics/rrtmgp/external/cpp/rte/mo_rte_util_array.cpp
-  ${SCREAM_BASE_DIR}/../cam/src/physics/rrtmgp/external/cpp/rte/mo_source_functions.h
   ${SCREAM_BASE_DIR}/../cam/src/physics/rrtmgp/external/cpp/rte/kernels/mo_fluxes_broadband_kernels.cpp
   ${SCREAM_BASE_DIR}/../cam/src/physics/rrtmgp/external/cpp/rte/kernels/mo_optical_props_kernels.cpp
   ${SCREAM_BASE_DIR}/../cam/src/physics/rrtmgp/external/cpp/rte/kernels/mo_rte_solver_kernels.cpp
-  #${SCREAM_BASE_DIR}/../cam/src/physics/rrtmgp/external/cpp/examples/mo_load_coefficients.cpp
-  mo_load_coefficients.cpp
-  ${SCREAM_BASE_DIR}/../cam/src/physics/rrtmgp/external/cpp/const.h
-  #${SCREAM_BASE_DIR}/../cam/src/physics/rrtmgp/external/cpp/extensions/mo_fluxes_byband.cpp
-  #${SCREAM_BASE_DIR}/../cam/src/physics/rrtmgp/external/cpp/extensions/mo_fluxes_byband_kernels.cpp
-  #${SCREAM_BASE_DIR}/../cam/src/physics/rrtmgp/external/cpp/extensions/mo_fluxes_bygpoint.cpp
-  #${SCREAM_BASE_DIR}/../cam/src/physics/rrtmgp/external/cpp/extensions/mo_heating_rates.cpp
-  #${SCREAM_BASE_DIR}/../cam/src/physics/rrtmgp/external/cpp/extensions/mo_rrtmgp_clr_all_sky.cpp
+  ${SCREAM_BASE_DIR}/../cam/src/physics/rrtmgp/external/cpp/examples/mo_load_coefficients.cpp
 )
 
 set(RRTMGP_HEADERS
