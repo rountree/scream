@@ -13,6 +13,7 @@ set(RRTMGP_SRCS
   ${SCREAM_BASE_DIR}/../cam/src/physics/rrtmgp/external/cpp/rrtmgp/mo_rrtmgp_util_reorder.cpp
   ${SCREAM_BASE_DIR}/../cam/src/physics/rrtmgp/external/cpp/rte/mo_rte_lw.cpp
   ${SCREAM_BASE_DIR}/../cam/src/physics/rrtmgp/external/cpp/rte/mo_rte_sw.cpp
+  ${SCREAM_BASE_DIR}/../cam/src/physics/rrtmgp/external/cpp/rte/expand_and_transpose.cpp
   ${SCREAM_BASE_DIR}/../cam/src/physics/rrtmgp/external/cpp/rte/kernels/mo_fluxes_broadband_kernels.cpp
   ${SCREAM_BASE_DIR}/../cam/src/physics/rrtmgp/external/cpp/rte/kernels/mo_optical_props_kernels.cpp
   ${SCREAM_BASE_DIR}/../cam/src/physics/rrtmgp/external/cpp/rte/kernels/mo_rte_solver_kernels.cpp

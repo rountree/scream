@@ -13,13 +13,17 @@ namespace scream {
          */
         extern GasOpticsRRTMGP k_dist_sw;
         extern GasOpticsRRTMGP k_dist_lw;
-
-        /*
-         * Assuming we can jump directly to using a C++ API...
-         */
         extern void rrtmgp_initialize();
-        extern void rrtmgp_main();
+        extern void rrtmgp_main(
+                real2d &p_lay, real2d &t_lay, real2d &p_lev, real2d &t_lev, 
+                GasConcs &gas_concs, real2d &col_dry,
+                real2d &sfc_alb_dir, real2d &sfc_alb_dif, real1d &mu0);
         extern void rrtmgp_finalize();
+        extern void rrtmgp_sw(
+                GasOpticsRRTMGP &k_dist, 
+                real2d &p_lay, real2d &t_lay, real2d &p_lev, real2d &t_lev, 
+                GasConcs &gas_concs, real2d &col_dry, 
+                real2d &sfc_alb_dir, real2d &sfc_alb_dif, real1d &mu0);
     } // namespace rrtmgp
 }  // namespace scream
 

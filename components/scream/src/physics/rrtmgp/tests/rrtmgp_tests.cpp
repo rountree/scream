@@ -36,7 +36,8 @@ namespace {
         // Initialize absorption coefficients
         scream::rrtmgp::rrtmgp_initialize();
 
-        // Read in dummy Garand atmosphere
+        // Read in dummy Garand atmosphere; if this were an actual model simulation, 
+        // these would be passed as inputs to the driver
         std::string inputfile = "./data/rrtmgp-allsky.nc";
         real2d p_lay;
         real2d t_lay;
@@ -51,11 +52,33 @@ namespace {
         REQUIRE(int(p_lay(1,1)) == 100933);
         REQUIRE(int(p_lay(1,size(p_lay))) == 19);
 
-        // Run RRTMGP code on dummy atmosphere
- 
-        // Write fluxes to file
+        // Get dimension sizes
+        int nlay = p_lay.dimension[1];
 
+        // Setup boundary conditions, solar zenith angle, etc
+        // NOTE: this stuff would come from the model in a real run
+        int nbndsw = scream::rrtmgp::k_dist_sw.get_nband();
+        real2d sfc_alb_dir("sfc_alb_dir", nbndsw, ncol);
+        real2d sfc_alb_dif("sfc_alb_dif", nbndsw, ncol);
+
+        // Ocean-ish values for surface albedos, just for example
+        memset(sfc_alb_dir , 0.06_wp );
+        memset(sfc_alb_dif , 0.06_wp );
+
+        // Pick a solar zenith angle; this should come from the model
+        real1d mu0("mu0", ncol);
+        memset(mu0, 0.86_wp );
+
+        // Run RRTMGP code on dummy atmosphere; this might get ugly
+        // Inputs should be atmosphere state, outputs should be fluxes
+        // TODO: should absorption coefficients be an input, or should that be initialized
+        // and kept in the scream::rrtmgp namespace?
+        scream::rrtmgp::rrtmgp_main(
+                p_lay, t_lay, p_lev, t_lev, gas_concs, col_dry, 
+                sfc_alb_dir, sfc_alb_dif, mu0);
+ 
         // Check fluxes against reference; note that input file contains reference fluxes
+        //read_fluxes(inputfile, flux_up_sw, flux_dn_sw, flux_up_lw, flux_up_lw, flux_dn_lw);
 
         // ALTERNATIVELY: create a single or two-layer atmosphere to do a dummy calc
     }
