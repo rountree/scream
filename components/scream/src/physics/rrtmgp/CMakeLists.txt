@@ -22,6 +22,7 @@ set(RRTMGP_SRCS
   # unit tests, and I could not figure out how to get it to build without adding it to the RRTMGP
   # library. TODO: revisit this!
   ${SCREAM_BASE_DIR}/../cam/src/physics/rrtmgp/external/cpp/examples/all-sky/mo_garand_atmos_io.cpp
+  ${SCREAM_BASE_DIR}/../cam/src/physics/rrtmgp/external/cpp/examples/all-sky/mo_load_cloud_coefficients.cpp
 )
 
 set(RRTMGP_HEADERS
@@ -43,6 +44,7 @@ target_include_directories(rrtmgp PUBLIC ${SCREAM_BASE_DIR}/../cam/src/physics/r
 target_include_directories(rrtmgp PUBLIC ${SCREAM_BASE_DIR}/../cam/src/physics/rrtmgp/external/cpp/examples)
 # Again, this is a hack to get the standalone tests to build that need the mo_garand_atmos_io.h header
 target_include_directories(rrtmgp PUBLIC ${SCREAM_BASE_DIR}/../cam/src/physics/rrtmgp/external/cpp/examples/all-sky)
+target_include_directories(rrtmgp PUBLIC ${SCREAM_BASE_DIR}/../cam/src/physics/rrtmgp/external/cpp/extensions/cloud_optics)
 target_include_directories(rrtmgp PUBLIC ${SCREAM_BASE_DIR}/../../externals/yakl)
 set_target_properties(rrtmgp PROPERTIES Fortran_MODULE_DIRECTORY ${SCREAM_F90_MODULES})
 set_target_properties(rrtmgp PROPERTIES CXX_STANDARD 14)

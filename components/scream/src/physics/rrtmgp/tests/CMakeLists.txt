@@ -22,3 +22,7 @@ CONFIGURE_FILE(${SCREAM_BASE_DIR}/../cam/src/physics/rrtmgp/external/rrtmgp/data
                ${CMAKE_CURRENT_BINARY_DIR}/data COPYONLY)
 CONFIGURE_FILE(${SCREAM_BASE_DIR}/../cam/src/physics/rrtmgp/external/examples/all-sky/rrtmgp-allsky.nc
                ${CMAKE_CURRENT_BINARY_DIR}/data COPYONLY)
+CONFIGURE_FILE(${SCREAM_BASE_DIR}/../cam/src/physics/rrtmgp/external/extensions/cloud_optics/rrtmgp-cloud-optics-coeffs-sw.nc
+               ${CMAKE_CURRENT_BINARY_DIR}/data COPYONLY)
+CONFIGURE_FILE(${SCREAM_BASE_DIR}/../cam/src/physics/rrtmgp/external/extensions/cloud_optics/rrtmgp-cloud-optics-coeffs-lw.nc
+               ${CMAKE_CURRENT_BINARY_DIR}/data COPYONLY)
