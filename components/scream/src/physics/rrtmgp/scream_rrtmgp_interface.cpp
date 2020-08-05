@@ -64,13 +64,13 @@ namespace scream {
         void rrtmgp_main(
                 real2d &p_lay, real2d &t_lay, real2d &p_lev, real2d &t_lev, 
                 GasConcs &gas_concs, real2d &col_dry,
-                real2d &sfc_alb_dir, real2d &sfc_alb_dif, real1d &mu0,
+                real2d &sfc_alb_dir, real2d &sfc_alb_dif, real1d &mu0, OpticalProps2str &clouds,
                 FluxesBroadband &fluxes_sw, FluxesBroadband &fluxes_lw) {
 
             // Do shortwave
             rrtmgp_sw(
                     k_dist_sw, p_lay, t_lay, p_lev, t_lev, gas_concs, col_dry, 
-                    sfc_alb_dir, sfc_alb_dif, mu0, fluxes_sw);
+                    sfc_alb_dir, sfc_alb_dif, mu0, clouds, fluxes_sw);
 
             // Do longwave
             //rrtmgp_lw(
@@ -84,7 +84,7 @@ namespace scream {
                 GasOpticsRRTMGP &k_dist, 
                 real2d &p_lay, real2d &t_lay, real2d &p_lev, real2d &t_lev, 
                 GasConcs &gas_concs, real2d &col_dry,
-                real2d &sfc_alb_dir, real2d &sfc_alb_dif, real1d &mu0,
+                real2d &sfc_alb_dir, real2d &sfc_alb_dif, real1d &mu0, OpticalProps2str &clouds,
                 FluxesBroadband &fluxes) {
 
             // Get problem sizes
@@ -102,7 +102,9 @@ namespace scream {
             bool top_at_1 = p_lay(1, 1) < p_lay(1, nlay);
             k_dist.gas_optics(top_at_1, p_lay, p_lev, t_lay, gas_concs, optics, toa_flux);
 
-            // If we had clouds, we'd combine gas and cloud optics here
+            // Combine gas and cloud optics
+            clouds.delta_scale();
+            clouds.increment(optics);
 
             // Compute fluxes
             rte_sw(optics, top_at_1, mu0, toa_flux, sfc_alb_dir, sfc_alb_dif, fluxes);

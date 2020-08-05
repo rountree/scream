@@ -12,6 +12,8 @@ if (NOT ${SCREAM_BASELINES_ONLY})
     CreateUnitTest(rrtmgp_tests "rrtmgp_tests.cpp" "${NEED_LIBS}" LABELS "rrtmgp")
     set_target_properties(rrtmgp_tests PROPERTIES CXX_STANDARD 14)
     #target_include_directories(rrtmgp_tests PUBLIC ${SCREAM_BASE_DIR}/../cam/src/physics/rrtmgp/external/cpp/examples/all-sky)
+    #target_include_directories(rrtmgp_tests PUBLIC ${SCREAM_BASE_DIR}/../cam/src/physics/rrtmgp/external/cpp/examples/all-sky)
+    target_include_directories(rrtmgp_tests PUBLIC ${SCREAM_BASE_DIR}/../../externals/yakl)
 endif()
 
 # Copy RRTMGP absorption coefficient lookup tables to local data directory
@@ -20,7 +22,9 @@ CONFIGURE_FILE(${SCREAM_BASE_DIR}/../cam/src/physics/rrtmgp/external/rrtmgp/data
                ${CMAKE_CURRENT_BINARY_DIR}/data COPYONLY)
 CONFIGURE_FILE(${SCREAM_BASE_DIR}/../cam/src/physics/rrtmgp/external/rrtmgp/data/rrtmgp-data-lw-g256-2018-12-04.nc
                ${CMAKE_CURRENT_BINARY_DIR}/data COPYONLY)
-CONFIGURE_FILE(${SCREAM_BASE_DIR}/../cam/src/physics/rrtmgp/external/examples/all-sky/rrtmgp-allsky.nc
+CONFIGURE_FILE(${SCREAM_BASE_DIR}/../cam/src/physics/rrtmgp/external/examples/all-sky/rrtmgp-clrsky.nc
+               ${CMAKE_CURRENT_BINARY_DIR}/data COPYONLY)
+CONFIGURE_FILE(${SCREAM_BASE_DIR}/src/physics/rrtmgp/tests/rrtmgp-allsky.nc
                ${CMAKE_CURRENT_BINARY_DIR}/data COPYONLY)
 CONFIGURE_FILE(${SCREAM_BASE_DIR}/../cam/src/physics/rrtmgp/external/extensions/cloud_optics/rrtmgp-cloud-optics-coeffs-sw.nc
                ${CMAKE_CURRENT_BINARY_DIR}/data COPYONLY)

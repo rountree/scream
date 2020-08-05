@@ -1,3 +1,5 @@
+#include <iostream>
+#include <cmath>
 #include "catch2/catch.hpp"
 #include "physics/rrtmgp/scream_rrtmgp_interface.hpp"
 #include "netcdf.h"
@@ -5,15 +7,49 @@
 #include "mo_garand_atmos_io.h"
 #include "mo_load_cloud_coefficients.h"
 #include "mo_fluxes.h"
+#include "FortranIntrinsics.h"
 namespace {
 
-    OpticalProps2str dummy_clouds(std::string cloud_optics_file, GasOpticsRRTMGP &kdist, real2d &t_lay);
+    OpticalProps2str dummy_clouds(std::string cloud_optics_file, GasOpticsRRTMGP &kdist, real2d &p_lay, real2d &t_lay);
     void read_fluxes(
             std::string inputfile, 
             real2d &sw_flux_up, real2d &sw_flux_dn,
             real2d &lw_flux_up, real2d &lw_flux_dn);
 
-    bool all_equals(real2d &arr1, real2d &arr2);
+    // TODO: use YAKL intrinsics for this; this won't work on the GPU
+    bool all_equals(real2d &arr1, real2d &arr2) {
+        double tolerance = 0.01;
+        /*
+        real2d residual = arr1 - arr2;
+        if (yakl::fortran::anyGT(residual, tolerance) || yakl::fortran::anyLT(residual, -tolerance)) {
+            printf("max(arr1 - arr2) = %f\n", yakl::fortran::maxval(residual));
+            return false;
+        } else {
+            return true;
+        }
+        */
+        int nx = arr1.dimension[0];
+        int ny = arr2.dimension[1];
+        for (int i=1; i<nx+1; i++) {
+            for (int j=1; j<ny+1; j++) {
+                if (abs(arr1(i,j) - arr2(i,j)) > tolerance) {
+                    printf("arr1 = %f, arr2 = %f\n", arr1(i,j), arr2(i,j));
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    template <class T> double arrmin(T &arr) {
+        double minval = arr.myData[0];
+        for (int i = 0; i<arr.totElems(); i++) {
+            if (arr.myData[i] < minval) {
+                minval = arr.myData[i];
+            }
+        }
+        return minval;
+    }
 
     TEST_CASE("rrtmgp_read_netcdf", "") {
 
@@ -105,7 +141,7 @@ namespace {
         // Get dummy clouds so we can compare with reference fluxes
         // OR do clearsky problem?
         std::string cloud_optics_file_sw = "./data/rrtmgp-cloud-optics-coeffs-sw.nc";
-        OpticalProps2str clouds = dummy_clouds(cloud_optics_file_sw, scream::rrtmgp::k_dist_sw, t_lay);
+        OpticalProps2str clouds = dummy_clouds(cloud_optics_file_sw, scream::rrtmgp::k_dist_sw, p_lay, t_lay);
 
         // Run RRTMGP code on dummy atmosphere; this might get ugly
         // Inputs should be atmosphere state, outputs should be fluxes
@@ -113,18 +149,26 @@ namespace {
         // and kept in the scream::rrtmgp namespace?
         scream::rrtmgp::rrtmgp_main(
                 p_lay, t_lay, p_lev, t_lev, gas_concs, col_dry, 
-                sfc_alb_dir, sfc_alb_dif, mu0,
+                sfc_alb_dir, sfc_alb_dif, mu0, clouds,
                 fluxes_sw, fluxes_lw);
  
         // Check fluxes against reference; note that input file contains reference fluxes
-        read_fluxes(inputfile, sw_flux_up, sw_flux_dn, lw_flux_up, lw_flux_dn);
+        real2d sw_flux_up_ref ("sw_flux_up_ref " ,ncol,nlay+1);
+        real2d sw_flux_dn_ref  ("sw_flux_dn_ref " ,ncol,nlay+1);
+        real2d sw_flux_dn_dir_ref ("sw_flux_dn_dir_ref ",ncol,nlay+1);
+        real2d lw_flux_up_ref ("lw_flux_up_ref " ,ncol,nlay+1);
+        real2d lw_flux_dn_ref  ("lw_flux_dn_ref " ,ncol,nlay+1);
+        read_fluxes(inputfile, sw_flux_up_ref , sw_flux_dn_ref , lw_flux_up_ref , lw_flux_dn_ref );
 
-        REQUIRE(all_equals(sw_flux_up, fluxes_sw.flux_up));
+        // Check values
+        REQUIRE(all_equals(sw_flux_up_ref , fluxes_sw.flux_up));
 
         // ALTERNATIVELY: create a single or two-layer atmosphere to do a dummy calc
     }
 
-    OpticalProps2str dummy_clouds(std::string cloud_optics_file, GasOpticsRRTMGP &kdist, real2d &t_lay) {
+    OpticalProps2str dummy_clouds(
+            std::string cloud_optics_file, GasOpticsRRTMGP &kdist, 
+            real2d &p_lay, real2d &t_lay) {
 
         // Problem sizes
         int ncol = t_lay.dimension[0];
@@ -144,6 +188,34 @@ namespace {
         // have used it directly in the calls to the driver routines.
         CloudOptics cloud_optics;
         load_cld_lutcoeff(cloud_optics, cloud_optics_file);
+
+        // Needed for consistency with all-sky example problem?
+        cloud_optics.set_ice_roughness(2);
+
+        // Generate some fake liquid and ice water data. We pick values to be midway between
+        // the min and max of the valid lookup table values for effective radii
+        real rel_val = 0.5 * (cloud_optics.get_min_radius_liq() + cloud_optics.get_max_radius_liq());
+        real rei_val = 0.5 * (cloud_optics.get_min_radius_ice() + cloud_optics.get_max_radius_ice());
+
+        // Restrict clouds to troposphere (> 100 hPa = 100*100 Pa) and not very close to the ground (< 900 hPa), and
+        // put them in 2/3 of the columns since that's roughly the total cloudiness of earth.
+        // Set sane values for liquid and ice water path.
+        real2d rel("rel", ncol, nlay);
+        real2d rei("rei", ncol, nlay);
+        real2d lwp("lwp", ncol, nlay);
+        real2d iwp("iwp", ncol, nlay);
+        real2d cloud_mask("cloud_mask", ncol, nlay);
+        parallel_for( Bounds<2>(nlay,ncol) , YAKL_LAMBDA (int ilay, int icol) {
+            cloud_mask(icol,ilay) = p_lay(icol,ilay) > 100._wp * 100._wp && p_lay(icol,ilay) < 900._wp * 100._wp && mod(icol, 3) != 0;
+            // Ice and liquid will overlap in a few layers
+            lwp(icol,ilay) = merge(10._wp,  0._wp, cloud_mask(icol,ilay) && t_lay(icol,ilay) > 263._wp);
+            iwp(icol,ilay) = merge(10._wp,  0._wp, cloud_mask(icol,ilay) && t_lay(icol,ilay) < 273._wp);
+            rel(icol,ilay) = merge(rel_val, 0._wp, lwp(icol,ilay) > 0._wp);
+            rei(icol,ilay) = merge(rei_val, 0._wp, iwp(icol,ilay) > 0._wp);
+        });
+
+        // Calculate cloud optics
+        cloud_optics.cloud_optics(lwp, iwp, rel, rei, clouds);
 
         // Return optics
         return clouds;
@@ -168,23 +240,10 @@ namespace {
         lw_flux_dn = real2d("lw_flux_dn", ncol, nlev);
 
         // Read data
-        io.read(sw_flux_up, "sw_flux_up");
-        io.read(sw_flux_dn, "sw_flux_dn");
-        io.read(lw_flux_up, "lw_flux_up");
-        io.read(lw_flux_dn, "lw_flux_dn");
+        io.read(sw_flux_up, "sw_flux_up_result");
+        io.read(sw_flux_dn, "sw_flux_dn_result");
+        io.read(lw_flux_up, "lw_flux_up_result");
+        io.read(lw_flux_dn, "lw_flux_dn_result");
     }
    
-    bool all_equals(real2d &arr1, real2d &arr2) {
-        int nx = arr1.dimension[0];
-        int ny = arr2.dimension[1];
-        for (int i=0; i<nx; i++) {
-            for (int j=0; j<ny; j++) {
-                if (arr1(i,j) != arr2(i,j)) {
-                    return false;
-                }
-            }
-        }
-        return true;
-    }
-
 } // empty namespace
