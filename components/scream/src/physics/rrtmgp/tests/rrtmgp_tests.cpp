@@ -10,8 +10,11 @@
 #include "FortranIntrinsics.h"
 namespace {
 
-    OpticalProps2str dummy_clouds_sw(std::string cloud_optics_file, GasOpticsRRTMGP &kdist, real2d &p_lay, real2d &t_lay);
-    OpticalProps1scl dummy_clouds_lw(std::string cloud_optics_file, GasOpticsRRTMGP &kdist, real2d &p_lay, real2d &t_lay);
+    OpticalProps2str get_cloud_optics_sw(CloudOptics &cloud_optics, GasOpticsRRTMGP &kdist, real2d &p_lay, real2d &t_lay, real2d &lwp, real2d &iwp, real2d &rel, real2d &rei);
+    OpticalProps1scl get_cloud_optics_lw(CloudOptics &cloud_optics, GasOpticsRRTMGP &kdist, real2d &p_lay, real2d &t_lay, real2d &lwp, real2d &iwp, real2d &rel, real2d &rei);
+    void dummy_clouds(
+            CloudOptics &cloud_optics, real2d &p_lay, real2d &t_lay, 
+            real2d &lwp, real2d &iwp, real2d &rel, real2d &rei);
     void read_fluxes(
             std::string inputfile, 
             real2d &sw_flux_up, real2d &sw_flux_dn, real2d &sw_flux_dn_dir,
@@ -141,10 +144,28 @@ namespace {
 
         // Get dummy clouds so we can compare with reference fluxes
         // OR do clearsky problem?
+        // First, initialize cloud optics
         std::string cloud_optics_file_sw = "./data/rrtmgp-cloud-optics-coeffs-sw.nc";
         std::string cloud_optics_file_lw = "./data/rrtmgp-cloud-optics-coeffs-lw.nc";
-        OpticalProps2str clouds_sw = dummy_clouds_sw(cloud_optics_file_sw, scream::rrtmgp::k_dist_sw, p_lay, t_lay);
-        OpticalProps1scl clouds_lw = dummy_clouds_lw(cloud_optics_file_lw, scream::rrtmgp::k_dist_lw, p_lay, t_lay);
+
+        CloudOptics cloud_optics_sw;
+        CloudOptics cloud_optics_lw;
+        load_cld_lutcoeff(cloud_optics_sw, cloud_optics_file_sw);
+        load_cld_lutcoeff(cloud_optics_lw, cloud_optics_file_lw);
+
+        // Get dummy cloud PHYSICAL properties. Note that this function call
+        // needs the CloudOptics object only because it uses the min and max
+        // valid values from the lookup tables for liquid and ice water path to
+        // create a dummy atmosphere.
+        real2d lwp;
+        real2d iwp;
+        real2d rel;
+        real2d rei;
+        dummy_clouds(cloud_optics_sw, p_lay, t_lay, lwp, iwp, rel, rei);
+
+        // Convert to optical properties for input to RRTMGP (todo: move this to radiation driver)
+        OpticalProps2str clouds_sw = get_cloud_optics_sw(cloud_optics_sw, scream::rrtmgp::k_dist_sw, p_lay, t_lay, lwp, iwp, rel, rei);
+        OpticalProps1scl clouds_lw = get_cloud_optics_lw(cloud_optics_lw, scream::rrtmgp::k_dist_lw, p_lay, t_lay, lwp, iwp, rel, rei);
 
         // Run RRTMGP code on dummy atmosphere; this might get ugly
         // Inputs should be atmosphere state, outputs should be fluxes
@@ -174,9 +195,43 @@ namespace {
         // ALTERNATIVELY: create a single or two-layer atmosphere to do a dummy calc
     }
 
-    OpticalProps2str dummy_clouds_sw(
-            std::string cloud_optics_file, GasOpticsRRTMGP &kdist, 
-            real2d &p_lay, real2d &t_lay) {
+    void dummy_clouds(
+            CloudOptics &cloud_optics, real2d &p_lay, real2d &t_lay, 
+            real2d &lwp, real2d &iwp, real2d &rel, real2d &rei) {
+
+        // Problem sizes
+        int ncol = t_lay.dimension[0];
+        int nlay = t_lay.dimension[1];
+
+        REQUIRE(ncol == 128);
+
+        // Generate some fake liquid and ice water data. We pick values to be midway between
+        // the min and max of the valid lookup table values for effective radii
+        real rel_val = 0.5 * (cloud_optics.get_min_radius_liq() + cloud_optics.get_max_radius_liq());
+        real rei_val = 0.5 * (cloud_optics.get_min_radius_ice() + cloud_optics.get_max_radius_ice());
+
+        // Restrict clouds to troposphere (> 100 hPa = 100*100 Pa) and not very close to the ground (< 900 hPa), and
+        // put them in 2/3 of the columns since that's roughly the total cloudiness of earth.
+        // Set sane values for liquid and ice water path.
+        rel = real2d("rel", ncol, nlay);
+        rei = real2d("rei", ncol, nlay);
+        lwp = real2d("lwp", ncol, nlay);
+        iwp = real2d("iwp", ncol, nlay);
+        real2d cloud_mask("cloud_mask", ncol, nlay);
+        parallel_for( Bounds<2>(nlay,ncol) , YAKL_LAMBDA (int ilay, int icol) {
+            cloud_mask(icol,ilay) = p_lay(icol,ilay) > 100._wp * 100._wp && p_lay(icol,ilay) < 900._wp * 100._wp && mod(icol, 3) != 0;
+            // Ice and liquid will overlap in a few layers
+            lwp(icol,ilay) = merge(10._wp,  0._wp, cloud_mask(icol,ilay) && t_lay(icol,ilay) > 263._wp);
+            iwp(icol,ilay) = merge(10._wp,  0._wp, cloud_mask(icol,ilay) && t_lay(icol,ilay) < 273._wp);
+            rel(icol,ilay) = merge(rel_val, 0._wp, lwp(icol,ilay) > 0._wp);
+            rei(icol,ilay) = merge(rei_val, 0._wp, iwp(icol,ilay) > 0._wp);
+        });
+    }
+
+
+    OpticalProps2str get_cloud_optics_sw(
+            CloudOptics &cloud_optics, GasOpticsRRTMGP &kdist, 
+            real2d &p_lay, real2d &t_lay, real2d &lwp, real2d &iwp, real2d &rel, real2d &rei) {
 
         // Problem sizes
         int ncol = t_lay.dimension[0];
@@ -189,38 +244,8 @@ namespace {
         clouds.init(kdist.get_band_lims_wavenumber());
         clouds.alloc_2str(ncol, nlay);  // this is dumb, why do we need to init and alloc separately?!
 
-        // Initialize working optics class...this is kind of strange, but there's a separate
-        // class that does RRTMGP cloud optics. The actual cloud optical properties will then
-        // get copied over to the "clouds" instance of OpticalProps2str we created above. Not
-        // sure why the CloudOptics class didn't just inherit from OpticalProps2str so we could
-        // have used it directly in the calls to the driver routines.
-        CloudOptics cloud_optics;
-        load_cld_lutcoeff(cloud_optics, cloud_optics_file);
-
         // Needed for consistency with all-sky example problem?
         cloud_optics.set_ice_roughness(2);
-
-        // Generate some fake liquid and ice water data. We pick values to be midway between
-        // the min and max of the valid lookup table values for effective radii
-        real rel_val = 0.5 * (cloud_optics.get_min_radius_liq() + cloud_optics.get_max_radius_liq());
-        real rei_val = 0.5 * (cloud_optics.get_min_radius_ice() + cloud_optics.get_max_radius_ice());
-
-        // Restrict clouds to troposphere (> 100 hPa = 100*100 Pa) and not very close to the ground (< 900 hPa), and
-        // put them in 2/3 of the columns since that's roughly the total cloudiness of earth.
-        // Set sane values for liquid and ice water path.
-        real2d rel("rel", ncol, nlay);
-        real2d rei("rei", ncol, nlay);
-        real2d lwp("lwp", ncol, nlay);
-        real2d iwp("iwp", ncol, nlay);
-        real2d cloud_mask("cloud_mask", ncol, nlay);
-        parallel_for( Bounds<2>(nlay,ncol) , YAKL_LAMBDA (int ilay, int icol) {
-            cloud_mask(icol,ilay) = p_lay(icol,ilay) > 100._wp * 100._wp && p_lay(icol,ilay) < 900._wp * 100._wp && mod(icol, 3) != 0;
-            // Ice and liquid will overlap in a few layers
-            lwp(icol,ilay) = merge(10._wp,  0._wp, cloud_mask(icol,ilay) && t_lay(icol,ilay) > 263._wp);
-            iwp(icol,ilay) = merge(10._wp,  0._wp, cloud_mask(icol,ilay) && t_lay(icol,ilay) < 273._wp);
-            rel(icol,ilay) = merge(rel_val, 0._wp, lwp(icol,ilay) > 0._wp);
-            rei(icol,ilay) = merge(rei_val, 0._wp, iwp(icol,ilay) > 0._wp);
-        });
 
         // Calculate cloud optics
         cloud_optics.cloud_optics(lwp, iwp, rel, rei, clouds);
@@ -229,9 +254,9 @@ namespace {
         return clouds;
     }
 
-    OpticalProps1scl dummy_clouds_lw(
-            std::string cloud_optics_file, GasOpticsRRTMGP &kdist, 
-            real2d &p_lay, real2d &t_lay) {
+    OpticalProps1scl get_cloud_optics_lw(
+            CloudOptics &cloud_optics, GasOpticsRRTMGP &kdist, 
+            real2d &p_lay, real2d &t_lay, real2d &lwp, real2d &iwp, real2d &rel, real2d &rei) {
 
         // Problem sizes
         int ncol = t_lay.dimension[0];
@@ -244,38 +269,8 @@ namespace {
         clouds.init(kdist.get_band_lims_wavenumber());
         clouds.alloc_1scl(ncol, nlay);  // this is dumb, why do we need to init and alloc separately?!
 
-        // Initialize working optics class...this is kind of strange, but there's a separate
-        // class that does RRTMGP cloud optics. The actual cloud optical properties will then
-        // get copied over to the "clouds" instance of OpticalProps2str we created above. Not
-        // sure why the CloudOptics class didn't just inherit from OpticalProps2str so we could
-        // have used it directly in the calls to the driver routines.
-        CloudOptics cloud_optics;
-        load_cld_lutcoeff(cloud_optics, cloud_optics_file);
-
         // Needed for consistency with all-sky example problem?
         cloud_optics.set_ice_roughness(2);
-
-        // Generate some fake liquid and ice water data. We pick values to be midway between
-        // the min and max of the valid lookup table values for effective radii
-        real rel_val = 0.5 * (cloud_optics.get_min_radius_liq() + cloud_optics.get_max_radius_liq());
-        real rei_val = 0.5 * (cloud_optics.get_min_radius_ice() + cloud_optics.get_max_radius_ice());
-
-        // Restrict clouds to troposphere (> 100 hPa = 100*100 Pa) and not very close to the ground (< 900 hPa), and
-        // put them in 2/3 of the columns since that's roughly the total cloudiness of earth.
-        // Set sane values for liquid and ice water path.
-        real2d rel("rel", ncol, nlay);
-        real2d rei("rei", ncol, nlay);
-        real2d lwp("lwp", ncol, nlay);
-        real2d iwp("iwp", ncol, nlay);
-        real2d cloud_mask("cloud_mask", ncol, nlay);
-        parallel_for( Bounds<2>(nlay,ncol) , YAKL_LAMBDA (int ilay, int icol) {
-            cloud_mask(icol,ilay) = p_lay(icol,ilay) > 100._wp * 100._wp && p_lay(icol,ilay) < 900._wp * 100._wp && mod(icol, 3) != 0;
-            // Ice and liquid will overlap in a few layers
-            lwp(icol,ilay) = merge(10._wp,  0._wp, cloud_mask(icol,ilay) && t_lay(icol,ilay) > 263._wp);
-            iwp(icol,ilay) = merge(10._wp,  0._wp, cloud_mask(icol,ilay) && t_lay(icol,ilay) < 273._wp);
-            rel(icol,ilay) = merge(rel_val, 0._wp, lwp(icol,ilay) > 0._wp);
-            rei(icol,ilay) = merge(rei_val, 0._wp, iwp(icol,ilay) > 0._wp);
-        });
 
         // Calculate cloud optics
         cloud_optics.cloud_optics(lwp, iwp, rel, rei, clouds);
