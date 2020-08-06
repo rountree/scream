@@ -1,13 +1,26 @@
 #include "scream_rrtmgp_interface.hpp"
 #include "mo_load_coefficients.h"
+#include "mo_load_cloud_coefficients.h"
 #include "mo_gas_concentrations.h"
 #include "mo_gas_optics_rrtmgp.h"
+#include "mo_cloud_optics.h"
 #include "mo_rte_sw.h"
 #include "mo_rte_lw.h"
 #include "const.h"
 
 namespace scream {
     namespace rrtmgp {
+
+        OpticalProps2str get_cloud_optics_sw(CloudOptics &cloud_optics, GasOpticsRRTMGP &kdist, real2d &p_lay, real2d &t_lay, real2d &lwp, real2d &iwp, real2d &rel, real2d &rei);
+        OpticalProps1scl get_cloud_optics_lw(CloudOptics &cloud_optics, GasOpticsRRTMGP &kdist, real2d &p_lay, real2d &t_lay, real2d &lwp, real2d &iwp, real2d &rel, real2d &rei);
+
+        /*
+         * Names of input files we will need.
+         */
+        std::string coefficients_file_sw = "./data/rrtmgp-data-sw-g224-2018-12-04.nc";
+        std::string coefficients_file_lw = "./data/rrtmgp-data-lw-g256-2018-12-04.nc";
+        std::string cloud_optics_file_sw = "./data/rrtmgp-cloud-optics-coeffs-sw.nc";
+        std::string cloud_optics_file_lw = "./data/rrtmgp-cloud-optics-coeffs-lw.nc";
 
         /* 
          * Objects containing k-distribution information need to be initialized
@@ -16,6 +29,14 @@ namespace scream {
          */
         GasOpticsRRTMGP k_dist_sw;
         GasOpticsRRTMGP k_dist_lw;
+
+        /*
+         * Objects containing cloud optical property look-up table information.
+         * We want to initialize these once and use throughout the life of the
+         * program, so declare here and read data in during rrtmgp_initialize().
+         */
+        CloudOptics cloud_optics_sw;
+        CloudOptics cloud_optics_lw;
 
         /* 
          * Define some dummy routines so we can start working on the interface
@@ -51,13 +72,12 @@ namespace scream {
             }
 
             // Load and initialize absorption coefficient data
-            std::string coefficients_file_sw = "./data/rrtmgp-data-sw-g224-2018-12-04.nc";
-            std::string coefficients_file_lw = "./data/rrtmgp-data-lw-g256-2018-12-04.nc";
             load_and_init(k_dist_sw, coefficients_file_sw, gas_concs);
             load_and_init(k_dist_lw, coefficients_file_lw, gas_concs);
 
-            // Verify that we loaded absorption coefficient data properly
-            //std::cout << k_dist_sw.press_ref << "\n";
+            // Load and initialize cloud optical property look-up table information
+            load_cld_lutcoeff(cloud_optics_sw, cloud_optics_file_sw);
+            load_cld_lutcoeff(cloud_optics_lw, cloud_optics_file_lw);
         }
 
         void rrtmgp_finalize() {}
@@ -66,8 +86,12 @@ namespace scream {
                 real2d &p_lay, real2d &t_lay, real2d &p_lev, real2d &t_lev, 
                 GasConcs &gas_concs, real2d &col_dry,
                 real2d &sfc_alb_dir, real2d &sfc_alb_dif, real1d &mu0, 
-                OpticalProps2str &clouds_sw, OpticalProps1scl &clouds_lw,
+                real2d &lwp, real2d &iwp, real2d &rel, real2d &rei,
                 FluxesBroadband &fluxes_sw, FluxesBroadband &fluxes_lw) {
+
+            // Convert cloud physical properties to optical properties for input to RRTMGP
+            OpticalProps2str clouds_sw = get_cloud_optics_sw(cloud_optics_sw, k_dist_sw, p_lay, t_lay, lwp, iwp, rel, rei);
+            OpticalProps1scl clouds_lw = get_cloud_optics_lw(cloud_optics_lw, k_dist_lw, p_lay, t_lay, lwp, iwp, rel, rei);
 
             // Do shortwave
             rrtmgp_sw(
@@ -81,6 +105,55 @@ namespace scream {
             
             // Calculate heating rates
         }
+
+
+        OpticalProps2str get_cloud_optics_sw(
+                CloudOptics &cloud_optics, GasOpticsRRTMGP &kdist, 
+                real2d &p_lay, real2d &t_lay, real2d &lwp, real2d &iwp, real2d &rel, real2d &rei) {
+
+            // Problem sizes
+            int ncol = t_lay.dimension[0];
+            int nlay = t_lay.dimension[1];
+
+            // Initialize optics
+            OpticalProps2str clouds;
+            clouds.init(kdist.get_band_lims_wavenumber());
+            clouds.alloc_2str(ncol, nlay);  // this is dumb, why do we need to init and alloc separately?!
+
+            // Needed for consistency with all-sky example problem?
+            cloud_optics.set_ice_roughness(2);
+
+            // Calculate cloud optics
+            cloud_optics.cloud_optics(lwp, iwp, rel, rei, clouds);
+
+            // Return optics
+            return clouds;
+        }
+
+
+        OpticalProps1scl get_cloud_optics_lw(
+                CloudOptics &cloud_optics, GasOpticsRRTMGP &kdist, 
+                real2d &p_lay, real2d &t_lay, real2d &lwp, real2d &iwp, real2d &rel, real2d &rei) {
+
+            // Problem sizes
+            int ncol = t_lay.dimension[0];
+            int nlay = t_lay.dimension[1];
+
+            // Initialize optics
+            OpticalProps1scl clouds;
+            clouds.init(kdist.get_band_lims_wavenumber());
+            clouds.alloc_1scl(ncol, nlay);  // this is dumb, why do we need to init and alloc separately?!
+
+            // Needed for consistency with all-sky example problem?
+            cloud_optics.set_ice_roughness(2);
+
+            // Calculate cloud optics
+            cloud_optics.cloud_optics(lwp, iwp, rel, rei, clouds);
+
+            // Return optics
+            return clouds;
+        }
+
 
         void rrtmgp_sw(
                 GasOpticsRRTMGP &k_dist, 

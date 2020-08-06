@@ -5,13 +5,11 @@
 #include "netcdf.h"
 #include "mo_gas_concentrations.h"
 #include "mo_garand_atmos_io.h"
-#include "mo_load_cloud_coefficients.h"
 #include "mo_fluxes.h"
+#include "mo_cloud_optics.h"
 #include "FortranIntrinsics.h"
 namespace {
 
-    OpticalProps2str get_cloud_optics_sw(CloudOptics &cloud_optics, GasOpticsRRTMGP &kdist, real2d &p_lay, real2d &t_lay, real2d &lwp, real2d &iwp, real2d &rel, real2d &rei);
-    OpticalProps1scl get_cloud_optics_lw(CloudOptics &cloud_optics, GasOpticsRRTMGP &kdist, real2d &p_lay, real2d &t_lay, real2d &lwp, real2d &iwp, real2d &rel, real2d &rei);
     void dummy_clouds(
             CloudOptics &cloud_optics, real2d &p_lay, real2d &t_lay, 
             real2d &lwp, real2d &iwp, real2d &rel, real2d &rei);
@@ -144,14 +142,6 @@ namespace {
 
         // Get dummy clouds so we can compare with reference fluxes
         // OR do clearsky problem?
-        // First, initialize cloud optics
-        std::string cloud_optics_file_sw = "./data/rrtmgp-cloud-optics-coeffs-sw.nc";
-        std::string cloud_optics_file_lw = "./data/rrtmgp-cloud-optics-coeffs-lw.nc";
-
-        CloudOptics cloud_optics_sw;
-        CloudOptics cloud_optics_lw;
-        load_cld_lutcoeff(cloud_optics_sw, cloud_optics_file_sw);
-        load_cld_lutcoeff(cloud_optics_lw, cloud_optics_file_lw);
 
         // Get dummy cloud PHYSICAL properties. Note that this function call
         // needs the CloudOptics object only because it uses the min and max
@@ -161,11 +151,7 @@ namespace {
         real2d iwp;
         real2d rel;
         real2d rei;
-        dummy_clouds(cloud_optics_sw, p_lay, t_lay, lwp, iwp, rel, rei);
-
-        // Convert to optical properties for input to RRTMGP (todo: move this to radiation driver)
-        OpticalProps2str clouds_sw = get_cloud_optics_sw(cloud_optics_sw, scream::rrtmgp::k_dist_sw, p_lay, t_lay, lwp, iwp, rel, rei);
-        OpticalProps1scl clouds_lw = get_cloud_optics_lw(cloud_optics_lw, scream::rrtmgp::k_dist_lw, p_lay, t_lay, lwp, iwp, rel, rei);
+        dummy_clouds(scream::rrtmgp::cloud_optics_sw, p_lay, t_lay, lwp, iwp, rel, rei);
 
         // Run RRTMGP code on dummy atmosphere; this might get ugly
         // Inputs should be atmosphere state, outputs should be fluxes
@@ -174,7 +160,7 @@ namespace {
         scream::rrtmgp::rrtmgp_main(
                 p_lay, t_lay, p_lev, t_lev, gas_concs, col_dry, 
                 sfc_alb_dir, sfc_alb_dif, mu0,
-                clouds_sw, clouds_lw,
+                lwp, iwp, rel, rei,
                 fluxes_sw, fluxes_lw);
  
         // Check fluxes against reference; note that input file contains reference fluxes
@@ -228,56 +214,6 @@ namespace {
         });
     }
 
-
-    OpticalProps2str get_cloud_optics_sw(
-            CloudOptics &cloud_optics, GasOpticsRRTMGP &kdist, 
-            real2d &p_lay, real2d &t_lay, real2d &lwp, real2d &iwp, real2d &rel, real2d &rei) {
-
-        // Problem sizes
-        int ncol = t_lay.dimension[0];
-        int nlay = t_lay.dimension[1];
-
-        REQUIRE(ncol == 128);
-
-        // Initialize optics
-        OpticalProps2str clouds;
-        clouds.init(kdist.get_band_lims_wavenumber());
-        clouds.alloc_2str(ncol, nlay);  // this is dumb, why do we need to init and alloc separately?!
-
-        // Needed for consistency with all-sky example problem?
-        cloud_optics.set_ice_roughness(2);
-
-        // Calculate cloud optics
-        cloud_optics.cloud_optics(lwp, iwp, rel, rei, clouds);
-
-        // Return optics
-        return clouds;
-    }
-
-    OpticalProps1scl get_cloud_optics_lw(
-            CloudOptics &cloud_optics, GasOpticsRRTMGP &kdist, 
-            real2d &p_lay, real2d &t_lay, real2d &lwp, real2d &iwp, real2d &rel, real2d &rei) {
-
-        // Problem sizes
-        int ncol = t_lay.dimension[0];
-        int nlay = t_lay.dimension[1];
-
-        REQUIRE(ncol == 128);
-
-        // Initialize optics
-        OpticalProps1scl clouds;
-        clouds.init(kdist.get_band_lims_wavenumber());
-        clouds.alloc_1scl(ncol, nlay);  // this is dumb, why do we need to init and alloc separately?!
-
-        // Needed for consistency with all-sky example problem?
-        cloud_optics.set_ice_roughness(2);
-
-        // Calculate cloud optics
-        cloud_optics.cloud_optics(lwp, iwp, rel, rei, clouds);
-
-        // Return optics
-        return clouds;
-    }
 
     // Function to read fluxes from input file so we can compare our answers against the reference
     void read_fluxes(

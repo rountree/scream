@@ -3,8 +3,6 @@ include(ScreamUtils)
 # Required libraries
 set (NEED_LIBS rrtmgp scream_control scream_share yakl)
 
-#set (additional_src ${SCREAM_BASE_DIR}/../cam/src/physics/rrtmgp/external/cpp/examples/all-sky/mo_garand_atmos_io.cpp)
-
 # NOTE: tests inside this if statement won't be built in a baselines-only build
 if (NOT ${SCREAM_BASELINES_ONLY})
     set_source_files_properties("rrtmgp_tests.cpp" PROPERTIES CXX_STANDARD 14)
