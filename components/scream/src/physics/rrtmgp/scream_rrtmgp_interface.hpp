@@ -18,7 +18,8 @@ namespace scream {
         extern void rrtmgp_main(
                 real2d &p_lay, real2d &t_lay, real2d &p_lev, real2d &t_lev, 
                 GasConcs &gas_concs, real2d &col_dry,
-                real2d &sfc_alb_dir, real2d &sfc_alb_dif, real1d &mu0, OpticalProps2str &clouds,
+                real2d &sfc_alb_dir, real2d &sfc_alb_dif, real1d &mu0, 
+                OpticalProps2str &clouds_sw, OpticalProps1scl &clouds_lw,
                 FluxesBroadband &fluxes_sw, FluxesBroadband &fluxes_lw);
         extern void rrtmgp_finalize();
         extern void rrtmgp_sw(
@@ -26,6 +27,12 @@ namespace scream {
                 real2d &p_lay, real2d &t_lay, real2d &p_lev, real2d &t_lev, 
                 GasConcs &gas_concs, real2d &col_dry, 
                 real2d &sfc_alb_dir, real2d &sfc_alb_dif, real1d &mu0, OpticalProps2str &clouds,
+                FluxesBroadband &fluxes);
+        extern void rrtmgp_lw(
+                GasOpticsRRTMGP &k_dist,
+                real2d &p_lay, real2d &t_lay, real2d &p_lev, real2d &t_lev,
+                GasConcs &gas_concs, real2d &col_dry,
+                OpticalProps1scl &clouds,
                 FluxesBroadband &fluxes);
     } // namespace rrtmgp
 }  // namespace scream

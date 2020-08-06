@@ -3,6 +3,7 @@
 #include "mo_gas_concentrations.h"
 #include "mo_gas_optics_rrtmgp.h"
 #include "mo_rte_sw.h"
+#include "mo_rte_lw.h"
 #include "const.h"
 
 namespace scream {
@@ -64,18 +65,19 @@ namespace scream {
         void rrtmgp_main(
                 real2d &p_lay, real2d &t_lay, real2d &p_lev, real2d &t_lev, 
                 GasConcs &gas_concs, real2d &col_dry,
-                real2d &sfc_alb_dir, real2d &sfc_alb_dif, real1d &mu0, OpticalProps2str &clouds,
+                real2d &sfc_alb_dir, real2d &sfc_alb_dif, real1d &mu0, 
+                OpticalProps2str &clouds_sw, OpticalProps1scl &clouds_lw,
                 FluxesBroadband &fluxes_sw, FluxesBroadband &fluxes_lw) {
 
             // Do shortwave
             rrtmgp_sw(
                     k_dist_sw, p_lay, t_lay, p_lev, t_lev, gas_concs, col_dry, 
-                    sfc_alb_dir, sfc_alb_dif, mu0, clouds, fluxes_sw);
+                    sfc_alb_dir, sfc_alb_dif, mu0, clouds_sw, fluxes_sw);
 
             // Do longwave
-            //rrtmgp_lw(
-            //        k_dist_lw, p_lay, t_lay, p_lev, t_lev, gas_concs, col_dry,
-            //        fluxes_lw);
+            rrtmgp_lw(
+                    k_dist_lw, p_lay, t_lay, p_lev, t_lev, gas_concs, col_dry,
+                    clouds_lw, fluxes_lw);
             
             // Calculate heating rates
         }
@@ -108,6 +110,70 @@ namespace scream {
 
             // Compute fluxes
             rte_sw(optics, top_at_1, mu0, toa_flux, sfc_alb_dir, sfc_alb_dif, fluxes);
+        }
+
+        void rrtmgp_lw(
+                GasOpticsRRTMGP &k_dist,
+                real2d &p_lay, real2d &t_lay, real2d &p_lev, real2d &t_lev,
+                GasConcs &gas_concs, real2d &col_dry,
+                OpticalProps1scl &clouds,
+                FluxesBroadband &fluxes) {
+
+            // Problem size
+            int nbnd = k_dist.get_nband();
+            int ngpt = k_dist.get_ngpt();
+            int ncol = p_lay.dimension[0];
+            int nlay = p_lay.dimension[1];
+
+            // Allocate space for optical properties
+            OpticalProps1scl optics;
+            optics.alloc_1scl(ncol, nlay, k_dist);
+
+            // Boundary conditions
+            SourceFuncLW lw_sources;
+            lw_sources.alloc(ncol, nlay, k_dist);
+            real1d t_sfc   ("t_sfc"        ,ncol);
+            real2d emis_sfc("emis_sfc",nbnd,ncol);
+
+            // Surface temperature
+            bool top_at_1 = p_lay(1, 1) < p_lay(1, nlay);
+            auto t_lev_host = t_lev.createHostCopy();
+            memset( t_sfc    , t_lev_host(1, merge(nlay+1, 1, top_at_1)) );
+            memset( emis_sfc , 0.98_wp                                   );
+
+            // Do gas optics
+            //k_dist.gas_optics(top_at_1, p_lay, p_lev, t_lay, gas_concs, optics, toa_flux);
+            k_dist.gas_optics(top_at_1, p_lay, p_lev, t_lay, t_sfc, gas_concs, optics, lw_sources, real2d(), t_lev);
+
+            // Combine gas and cloud optics
+            clouds.increment(optics);
+
+            // Get Gaussian quadrature weights
+            // TODO: move this crap out of userland!
+            // Weights and angle secants for first order (k=1) Gaussian quadrature.
+            //   Values from Table 2, Clough et al, 1992, doi:10.1029/92JD01419
+            //   after Abramowitz & Stegun 1972, page 921
+            int constexpr max_gauss_pts = 4;
+            realHost2d gauss_Ds_host ("gauss_Ds" ,max_gauss_pts,max_gauss_pts);
+            gauss_Ds_host(1,1) = 1.66_wp      ; gauss_Ds_host(2,1) =         0._wp; gauss_Ds_host(3,1) =         0._wp; gauss_Ds_host(4,1) =         0._wp;
+            gauss_Ds_host(1,2) = 1.18350343_wp; gauss_Ds_host(2,2) = 2.81649655_wp; gauss_Ds_host(3,2) =         0._wp; gauss_Ds_host(4,2) =         0._wp;
+            gauss_Ds_host(1,3) = 1.09719858_wp; gauss_Ds_host(2,3) = 1.69338507_wp; gauss_Ds_host(3,3) = 4.70941630_wp; gauss_Ds_host(4,3) =         0._wp;
+            gauss_Ds_host(1,4) = 1.06056257_wp; gauss_Ds_host(2,4) = 1.38282560_wp; gauss_Ds_host(3,4) = 2.40148179_wp; gauss_Ds_host(4,4) = 7.15513024_wp;
+
+            realHost2d gauss_wts_host("gauss_wts",max_gauss_pts,max_gauss_pts);
+            gauss_wts_host(1,1) = 0.5_wp         ; gauss_wts_host(2,1) = 0._wp          ; gauss_wts_host(3,1) = 0._wp          ; gauss_wts_host(4,1) = 0._wp          ;
+            gauss_wts_host(1,2) = 0.3180413817_wp; gauss_wts_host(2,2) = 0.1819586183_wp; gauss_wts_host(3,2) = 0._wp          ; gauss_wts_host(4,2) = 0._wp          ;
+            gauss_wts_host(1,3) = 0.2009319137_wp; gauss_wts_host(2,3) = 0.2292411064_wp; gauss_wts_host(3,3) = 0.0698269799_wp; gauss_wts_host(4,3) = 0._wp          ;
+            gauss_wts_host(1,4) = 0.1355069134_wp; gauss_wts_host(2,4) = 0.2034645680_wp; gauss_wts_host(3,4) = 0.1298475476_wp; gauss_wts_host(4,4) = 0.0311809710_wp;
+
+            real2d gauss_Ds ("gauss_Ds" ,max_gauss_pts,max_gauss_pts);
+            real2d gauss_wts("gauss_wts",max_gauss_pts,max_gauss_pts);
+            gauss_Ds_host .deep_copy_to(gauss_Ds );
+            gauss_wts_host.deep_copy_to(gauss_wts);
+
+            // Compute fluxes
+            rte_lw(max_gauss_pts, gauss_Ds, gauss_wts, optics, top_at_1, lw_sources, emis_sfc, fluxes);
+
         }
 
     }  // namespace rrtmgp

@@ -10,10 +10,11 @@
 #include "FortranIntrinsics.h"
 namespace {
 
-    OpticalProps2str dummy_clouds(std::string cloud_optics_file, GasOpticsRRTMGP &kdist, real2d &p_lay, real2d &t_lay);
+    OpticalProps2str dummy_clouds_sw(std::string cloud_optics_file, GasOpticsRRTMGP &kdist, real2d &p_lay, real2d &t_lay);
+    OpticalProps1scl dummy_clouds_lw(std::string cloud_optics_file, GasOpticsRRTMGP &kdist, real2d &p_lay, real2d &t_lay);
     void read_fluxes(
             std::string inputfile, 
-            real2d &sw_flux_up, real2d &sw_flux_dn,
+            real2d &sw_flux_up, real2d &sw_flux_dn, real2d &sw_flux_dn_dir,
             real2d &lw_flux_up, real2d &lw_flux_dn);
 
     // TODO: use YAKL intrinsics for this; this won't work on the GPU
@@ -141,7 +142,9 @@ namespace {
         // Get dummy clouds so we can compare with reference fluxes
         // OR do clearsky problem?
         std::string cloud_optics_file_sw = "./data/rrtmgp-cloud-optics-coeffs-sw.nc";
-        OpticalProps2str clouds = dummy_clouds(cloud_optics_file_sw, scream::rrtmgp::k_dist_sw, p_lay, t_lay);
+        std::string cloud_optics_file_lw = "./data/rrtmgp-cloud-optics-coeffs-lw.nc";
+        OpticalProps2str clouds_sw = dummy_clouds_sw(cloud_optics_file_sw, scream::rrtmgp::k_dist_sw, p_lay, t_lay);
+        OpticalProps1scl clouds_lw = dummy_clouds_lw(cloud_optics_file_lw, scream::rrtmgp::k_dist_lw, p_lay, t_lay);
 
         // Run RRTMGP code on dummy atmosphere; this might get ugly
         // Inputs should be atmosphere state, outputs should be fluxes
@@ -149,7 +152,8 @@ namespace {
         // and kept in the scream::rrtmgp namespace?
         scream::rrtmgp::rrtmgp_main(
                 p_lay, t_lay, p_lev, t_lev, gas_concs, col_dry, 
-                sfc_alb_dir, sfc_alb_dif, mu0, clouds,
+                sfc_alb_dir, sfc_alb_dif, mu0,
+                clouds_sw, clouds_lw,
                 fluxes_sw, fluxes_lw);
  
         // Check fluxes against reference; note that input file contains reference fluxes
@@ -158,15 +162,19 @@ namespace {
         real2d sw_flux_dn_dir_ref ("sw_flux_dn_dir_ref ",ncol,nlay+1);
         real2d lw_flux_up_ref ("lw_flux_up_ref " ,ncol,nlay+1);
         real2d lw_flux_dn_ref  ("lw_flux_dn_ref " ,ncol,nlay+1);
-        read_fluxes(inputfile, sw_flux_up_ref , sw_flux_dn_ref , lw_flux_up_ref , lw_flux_dn_ref );
+        read_fluxes(inputfile, sw_flux_up_ref, sw_flux_dn_ref, sw_flux_dn_dir_ref, lw_flux_up_ref, lw_flux_dn_ref );
 
         // Check values
-        REQUIRE(all_equals(sw_flux_up_ref , fluxes_sw.flux_up));
+        REQUIRE(all_equals(sw_flux_up_ref    , fluxes_sw.flux_up    ));
+        REQUIRE(all_equals(sw_flux_dn_ref    , fluxes_sw.flux_dn    ));
+        REQUIRE(all_equals(sw_flux_dn_dir_ref, fluxes_sw.flux_dn_dir));
+        REQUIRE(all_equals(lw_flux_up_ref    , fluxes_lw.flux_up    ));
+        REQUIRE(all_equals(lw_flux_dn_ref    , fluxes_lw.flux_dn    ));
 
         // ALTERNATIVELY: create a single or two-layer atmosphere to do a dummy calc
     }
 
-    OpticalProps2str dummy_clouds(
+    OpticalProps2str dummy_clouds_sw(
             std::string cloud_optics_file, GasOpticsRRTMGP &kdist, 
             real2d &p_lay, real2d &t_lay) {
 
@@ -221,10 +229,65 @@ namespace {
         return clouds;
     }
 
+    OpticalProps1scl dummy_clouds_lw(
+            std::string cloud_optics_file, GasOpticsRRTMGP &kdist, 
+            real2d &p_lay, real2d &t_lay) {
+
+        // Problem sizes
+        int ncol = t_lay.dimension[0];
+        int nlay = t_lay.dimension[1];
+
+        REQUIRE(ncol == 128);
+
+        // Initialize optics
+        OpticalProps1scl clouds;
+        clouds.init(kdist.get_band_lims_wavenumber());
+        clouds.alloc_1scl(ncol, nlay);  // this is dumb, why do we need to init and alloc separately?!
+
+        // Initialize working optics class...this is kind of strange, but there's a separate
+        // class that does RRTMGP cloud optics. The actual cloud optical properties will then
+        // get copied over to the "clouds" instance of OpticalProps2str we created above. Not
+        // sure why the CloudOptics class didn't just inherit from OpticalProps2str so we could
+        // have used it directly in the calls to the driver routines.
+        CloudOptics cloud_optics;
+        load_cld_lutcoeff(cloud_optics, cloud_optics_file);
+
+        // Needed for consistency with all-sky example problem?
+        cloud_optics.set_ice_roughness(2);
+
+        // Generate some fake liquid and ice water data. We pick values to be midway between
+        // the min and max of the valid lookup table values for effective radii
+        real rel_val = 0.5 * (cloud_optics.get_min_radius_liq() + cloud_optics.get_max_radius_liq());
+        real rei_val = 0.5 * (cloud_optics.get_min_radius_ice() + cloud_optics.get_max_radius_ice());
+
+        // Restrict clouds to troposphere (> 100 hPa = 100*100 Pa) and not very close to the ground (< 900 hPa), and
+        // put them in 2/3 of the columns since that's roughly the total cloudiness of earth.
+        // Set sane values for liquid and ice water path.
+        real2d rel("rel", ncol, nlay);
+        real2d rei("rei", ncol, nlay);
+        real2d lwp("lwp", ncol, nlay);
+        real2d iwp("iwp", ncol, nlay);
+        real2d cloud_mask("cloud_mask", ncol, nlay);
+        parallel_for( Bounds<2>(nlay,ncol) , YAKL_LAMBDA (int ilay, int icol) {
+            cloud_mask(icol,ilay) = p_lay(icol,ilay) > 100._wp * 100._wp && p_lay(icol,ilay) < 900._wp * 100._wp && mod(icol, 3) != 0;
+            // Ice and liquid will overlap in a few layers
+            lwp(icol,ilay) = merge(10._wp,  0._wp, cloud_mask(icol,ilay) && t_lay(icol,ilay) > 263._wp);
+            iwp(icol,ilay) = merge(10._wp,  0._wp, cloud_mask(icol,ilay) && t_lay(icol,ilay) < 273._wp);
+            rel(icol,ilay) = merge(rel_val, 0._wp, lwp(icol,ilay) > 0._wp);
+            rei(icol,ilay) = merge(rei_val, 0._wp, iwp(icol,ilay) > 0._wp);
+        });
+
+        // Calculate cloud optics
+        cloud_optics.cloud_optics(lwp, iwp, rel, rei, clouds);
+
+        // Return optics
+        return clouds;
+    }
+
     // Function to read fluxes from input file so we can compare our answers against the reference
     void read_fluxes(
             std::string inputfile, 
-            real2d &sw_flux_up, real2d &sw_flux_dn,
+            real2d &sw_flux_up, real2d &sw_flux_dn, real2d &sw_flux_dn_dir,
             real2d &lw_flux_up, real2d &lw_flux_dn) {
 
         // Initialize netcdf reader
@@ -236,12 +299,14 @@ namespace {
         int ncol = io.getDimSize("col_flx");
         sw_flux_up = real2d("sw_flux_up", ncol, nlev);
         sw_flux_dn = real2d("sw_flux_dn", ncol, nlev);
+        sw_flux_dn_dir = real2d("sw_flux_dn_dir", ncol, nlev);
         lw_flux_up = real2d("lw_flux_up", ncol, nlev);
         lw_flux_dn = real2d("lw_flux_dn", ncol, nlev);
 
         // Read data
         io.read(sw_flux_up, "sw_flux_up_result");
         io.read(sw_flux_dn, "sw_flux_dn_result");
+        io.read(sw_flux_dn_dir, "sw_flux_dir_result");
         io.read(lw_flux_up, "lw_flux_up_result");
         io.read(lw_flux_dn, "lw_flux_dn_result");
     }
