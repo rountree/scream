@@ -87,7 +87,19 @@ namespace scream {
                 GasConcs &gas_concs, real2d &col_dry,
                 real2d &sfc_alb_dir, real2d &sfc_alb_dif, real1d &mu0, 
                 real2d &lwp, real2d &iwp, real2d &rel, real2d &rei,
-                FluxesBroadband &fluxes_sw, FluxesBroadband &fluxes_lw) {
+                real2d &sw_flux_up, real2d &sw_flux_dn, real2d &sw_flux_dn_dir,
+                real2d &lw_flux_up, real2d &lw_flux_dn) {
+
+            // Setup pointers to RRTMGP Sw fluxes
+            FluxesBroadband fluxes_sw;
+            fluxes_sw.flux_up = sw_flux_up;
+            fluxes_sw.flux_dn = sw_flux_dn;
+            fluxes_sw.flux_dn_dir = sw_flux_dn_dir;
+
+            // Setup pointers to RRTMGP LW fluxes
+            FluxesBroadband fluxes_lw;
+            fluxes_lw.flux_up = lw_flux_up;
+            fluxes_lw.flux_dn = lw_flux_dn;
 
             // Convert cloud physical properties to optical properties for input to RRTMGP
             OpticalProps2str clouds_sw = get_cloud_optics_sw(cloud_optics_sw, k_dist_sw, p_lay, t_lay, lwp, iwp, rel, rei);

@@ -13,6 +13,7 @@ namespace {
     void dummy_clouds(
             CloudOptics &cloud_optics, real2d &p_lay, real2d &t_lay, 
             real2d &lwp, real2d &iwp, real2d &rel, real2d &rei);
+
     void read_fluxes(
             std::string inputfile, 
             real2d &sw_flux_up, real2d &sw_flux_dn, real2d &sw_flux_dn_dir,
@@ -126,19 +127,12 @@ namespace {
         // input/outputs into the driver (persisting between calls), and
         // we would just have to setup the pointers to them in the
         // FluxesBroadband object
-        FluxesBroadband fluxes_sw;
         real2d sw_flux_up ("sw_flux_up" ,ncol,nlay+1);
         real2d sw_flux_dn ("sw_flux_dn" ,ncol,nlay+1);
         real2d sw_flux_dn_dir("sw_flux_dn_dir",ncol,nlay+1);
-        fluxes_sw.flux_up = sw_flux_up;
-        fluxes_sw.flux_dn = sw_flux_dn;
-        fluxes_sw.flux_dn_dir = sw_flux_dn_dir;
 
-        FluxesBroadband fluxes_lw;
         real2d lw_flux_up ("lw_flux_up" ,ncol,nlay+1);
         real2d lw_flux_dn ("lw_flux_dn" ,ncol,nlay+1);
-        fluxes_lw.flux_up = lw_flux_up;
-        fluxes_lw.flux_dn = lw_flux_dn;
 
         // Get dummy clouds so we can compare with reference fluxes
         // OR do clearsky problem?
@@ -161,7 +155,8 @@ namespace {
                 p_lay, t_lay, p_lev, t_lev, gas_concs, col_dry, 
                 sfc_alb_dir, sfc_alb_dif, mu0,
                 lwp, iwp, rel, rei,
-                fluxes_sw, fluxes_lw);
+                sw_flux_up, sw_flux_dn, sw_flux_dn_dir,
+                lw_flux_up, lw_flux_dn);
  
         // Check fluxes against reference; note that input file contains reference fluxes
         real2d sw_flux_up_ref ("sw_flux_up_ref " ,ncol,nlay+1);
@@ -172,11 +167,11 @@ namespace {
         read_fluxes(inputfile, sw_flux_up_ref, sw_flux_dn_ref, sw_flux_dn_dir_ref, lw_flux_up_ref, lw_flux_dn_ref );
 
         // Check values
-        REQUIRE(all_equals(sw_flux_up_ref    , fluxes_sw.flux_up    ));
-        REQUIRE(all_equals(sw_flux_dn_ref    , fluxes_sw.flux_dn    ));
-        REQUIRE(all_equals(sw_flux_dn_dir_ref, fluxes_sw.flux_dn_dir));
-        REQUIRE(all_equals(lw_flux_up_ref    , fluxes_lw.flux_up    ));
-        REQUIRE(all_equals(lw_flux_dn_ref    , fluxes_lw.flux_dn    ));
+        REQUIRE(all_equals(sw_flux_up_ref    , sw_flux_up    ));
+        REQUIRE(all_equals(sw_flux_dn_ref    , sw_flux_dn    ));
+        REQUIRE(all_equals(sw_flux_dn_dir_ref, sw_flux_dn_dir));
+        REQUIRE(all_equals(lw_flux_up_ref    , lw_flux_up    ));
+        REQUIRE(all_equals(lw_flux_dn_ref    , lw_flux_dn    ));
 
         // ALTERNATIVELY: create a single or two-layer atmosphere to do a dummy calc
     }
