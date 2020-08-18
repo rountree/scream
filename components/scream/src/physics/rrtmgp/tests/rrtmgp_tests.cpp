@@ -12,7 +12,15 @@ namespace {
 
     void dummy_clouds(
             CloudOptics &cloud_optics, real2d &p_lay, real2d &t_lay, 
-            real2d &lwp, real2d &iwp, real2d &rel, real2d &rei);
+            real2d &lwp, real2d &iwp, real2d &rel, real2d &rei
+        );
+
+    void dummy_atmos(
+            std::string inputfile,
+            int ncol, real2d &p_lay, real2d &t_lay, real2d &p_lev, real2d &t_lev, GasConcs &gas_concs, real2d &col_dry, 
+            real2d &sfc_alb_dir, real2d &sfc_alb_dif, real1d &mu0,
+            real2d &lwp, real2d &iwp, real2d &rel, real2d &rei
+        );
 
     void read_fluxes(
             std::string inputfile, 
@@ -92,15 +100,32 @@ namespace {
         // this will copy the first column of the input data (the first profile) ncol
         // times. We will then fill some fraction of these columns with clouds for
         // the test problem.
-        std::string inputfile = "./data/rrtmgp-allsky.nc";
         real2d p_lay;
         real2d t_lay;
         real2d p_lev;
         real2d t_lev;
         real2d col_dry;
         GasConcs gas_concs;
+        real2d sfc_alb_dir;
+        real2d sfc_alb_dif;
+        real1d mu0;
+        real2d lwp;
+        real2d iwp;
+        real2d rel;
+        real2d rei;
         int ncol = 128;
-        read_atmos(inputfile, p_lay, t_lay, p_lev, t_lev, gas_concs, col_dry, ncol);
+        std::string inputfile = "./data/rrtmgp-allsky.nc";
+        dummy_atmos(
+                inputfile, ncol, p_lay, t_lay, p_lev, t_lev, gas_concs, col_dry, 
+                sfc_alb_dir, sfc_alb_dif, mu0,
+                lwp, iwp, rel, rei
+            );
+
+        // Get dummy cloud PHYSICAL properties. Note that this function call
+        // needs the CloudOptics object only because it uses the min and max
+        // valid values from the lookup tables for liquid and ice water path to
+        // create a dummy atmosphere.
+        dummy_clouds(scream::rrtmgp::cloud_optics_sw, p_lay, t_lay, lwp, iwp, rel, rei);
 
         // Check that data was loaded properly; just sanity check a few values
         REQUIRE(int(p_lay(1,1)) == 100933);
@@ -109,20 +134,6 @@ namespace {
         // Get dimension sizes
         int nlay = p_lay.dimension[1];
 
-        // Setup boundary conditions, solar zenith angle, etc
-        // NOTE: this stuff would come from the model in a real run
-        int nbndsw = scream::rrtmgp::k_dist_sw.get_nband();
-        real2d sfc_alb_dir("sfc_alb_dir", nbndsw, ncol);
-        real2d sfc_alb_dif("sfc_alb_dif", nbndsw, ncol);
-
-        // Ocean-ish values for surface albedos, just for example
-        memset(sfc_alb_dir , 0.06_wp );
-        memset(sfc_alb_dif , 0.06_wp );
-
-        // Pick a solar zenith angle; this should come from the model
-        real1d mu0("mu0", ncol);
-        memset(mu0, 0.86_wp );
-
         // Setup flux outputs; In a real model run, the fluxes would be
         // input/outputs into the driver (persisting between calls), and
         // we would just have to setup the pointers to them in the
@@ -130,22 +141,8 @@ namespace {
         real2d sw_flux_up ("sw_flux_up" ,ncol,nlay+1);
         real2d sw_flux_dn ("sw_flux_dn" ,ncol,nlay+1);
         real2d sw_flux_dn_dir("sw_flux_dn_dir",ncol,nlay+1);
-
         real2d lw_flux_up ("lw_flux_up" ,ncol,nlay+1);
         real2d lw_flux_dn ("lw_flux_dn" ,ncol,nlay+1);
-
-        // Get dummy clouds so we can compare with reference fluxes
-        // OR do clearsky problem?
-
-        // Get dummy cloud PHYSICAL properties. Note that this function call
-        // needs the CloudOptics object only because it uses the min and max
-        // valid values from the lookup tables for liquid and ice water path to
-        // create a dummy atmosphere.
-        real2d lwp;
-        real2d iwp;
-        real2d rel;
-        real2d rei;
-        dummy_clouds(scream::rrtmgp::cloud_optics_sw, p_lay, t_lay, lwp, iwp, rel, rei);
 
         // Run RRTMGP code on dummy atmosphere; this might get ugly
         // Inputs should be atmosphere state, outputs should be fluxes
@@ -174,6 +171,30 @@ namespace {
         REQUIRE(all_equals(lw_flux_dn_ref    , lw_flux_dn    ));
 
         // ALTERNATIVELY: create a single or two-layer atmosphere to do a dummy calc
+    }
+
+    void dummy_atmos(
+            std::string inputfile, 
+            int ncol, real2d &p_lay, real2d &t_lay, real2d &p_lev, real2d &t_lev, GasConcs &gas_concs, real2d &col_dry, 
+            real2d &sfc_alb_dir, real2d &sfc_alb_dif, real1d &mu0,
+            real2d &lwp, real2d &iwp, real2d &rel, real2d &rei) {
+
+        read_atmos(inputfile, p_lay, t_lay, p_lev, t_lev, gas_concs, col_dry, ncol);
+
+        // Setup boundary conditions, solar zenith angle, etc
+        // NOTE: this stuff would come from the model in a real run
+        int nbndsw = scream::rrtmgp::k_dist_sw.get_nband();
+        sfc_alb_dir = real2d("sfc_alb_dir", nbndsw, ncol);
+        sfc_alb_dif = real2d("sfc_alb_dif", nbndsw, ncol);
+
+        // Ocean-ish values for surface albedos, just for example
+        memset(sfc_alb_dir , 0.06_wp );
+        memset(sfc_alb_dif , 0.06_wp );
+
+        // Pick a solar zenith angle; this should come from the model
+        mu0 = real1d("mu0", ncol);
+        memset(mu0, 0.86_wp );
+
     }
 
     void dummy_clouds(
