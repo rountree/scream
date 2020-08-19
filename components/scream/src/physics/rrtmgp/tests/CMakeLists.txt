@@ -3,7 +3,7 @@ include(ScreamUtils)
 # Required libraries
 set (NEED_LIBS rrtmgp scream_control scream_share yakl)
 
-set (SRC rrtmgp_tests.cpp rrtmgp_dummy_atmos.cpp)
+set (SRC rrtmgp_tests.cpp rrtmgp_test_utils.cpp)
 
 # NOTE: tests inside this if statement won't be built in a baselines-only build
 if (NOT ${SCREAM_BASELINES_ONLY})
