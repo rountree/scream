@@ -122,7 +122,7 @@ namespace scream {
             sw_flux_up, sw_flux_dn, sw_flux_dn_dir,
             lw_flux_up, lw_flux_dn
         );
-        //rrtmgp::rrtmgp_finalize();
+        rrtmgp::rrtmgp_finalize();
 
         // Check values
         REQUIRE(rrtmgpTest::all_equals(sw_flux_up_ref    , sw_flux_up    ));
