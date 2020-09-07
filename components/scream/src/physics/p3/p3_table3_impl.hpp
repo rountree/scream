@@ -23,28 +23,28 @@ void Functions<S,D>
   const auto dum1_lt = context && (dum1 <= sp(195.e-6));
   t.dumii = 1;
   if (dum1_lt.any()) {
-    scream_masked_loop(dum1_lt, s) {
+    ekat_masked_loop(dum1_lt, s) {
       const auto inv_dum3 = sp(0.1);
       auto rdumii = (dum1[s] * sp(1.e6) + 5) * inv_dum3;
-      rdumii = util::max<Scalar>(rdumii,  1);
-      rdumii = util::min<Scalar>(rdumii, 20);
+      rdumii = ekat::util::max<Scalar>(rdumii,  1);
+      rdumii = ekat::util::min<Scalar>(rdumii, 20);
       Int dumii = rdumii;
-      dumii = util::max(dumii,  1);
-      dumii = util::min(dumii, 20);
+      dumii = ekat::util::max(dumii,  1);
+      dumii = ekat::util::min(dumii, 20);
       t.rdumii[s] = rdumii;
       t.dumii[s] = dumii;
     }
   }
   const auto dum1_gte = context && !dum1_lt;
   if (dum1_gte.any()) {
-    scream_masked_loop(dum1_gte, s) {
+    ekat_masked_loop(dum1_gte, s) {
       const auto inv_dum3 = C::THIRD * sp(0.1);
       auto rdumii = (dum1[s] * sp(1.e+6) - 195) * inv_dum3 + 20;
-      rdumii = util::max<Scalar>(rdumii, 20);
-      rdumii = util::min<Scalar>(rdumii,300);
+      rdumii = ekat::util::max<Scalar>(rdumii, 20);
+      rdumii = ekat::util::min<Scalar>(rdumii,300);
       Int dumii = rdumii;
-      dumii = util::max(dumii, 20);
-      dumii = util::min(dumii,299);
+      dumii = ekat::util::max(dumii, 20);
+      dumii = ekat::util::min(dumii,299);
       t.rdumii[s] = rdumii;
       t.dumii[s] = dumii;
     }
@@ -93,16 +93,16 @@ void Functions<S,D>
   using DeviceTable2   = typename view_2d_table::non_const_type;
   using DeviceDnuTable = typename view_dnu_table::non_const_type;
 
-  const auto vn_table_d   = DeviceTable2("vn_table");
-  const auto vm_table_d   = DeviceTable2("vm_table");
+  const auto vn_table_d    = DeviceTable2("vn_table");
+  const auto vm_table_d    = DeviceTable2("vm_table");
   const auto revap_table_d = DeviceTable2("revap_table");
-  const auto mu_r_table_d = DeviceTable1("mu_r_table");
-  const auto dnu_table_d  = DeviceDnuTable("dnu");
-  const auto vn_table_h  = Kokkos::create_mirror_view(vn_table_d);
-  const auto vm_table_h  = Kokkos::create_mirror_view(vm_table_d);
-  const auto revap_table_h  = Kokkos::create_mirror_view(revap_table_d);
-  const auto mu_table_h  = Kokkos::create_mirror_view(mu_r_table_d);
-  const auto dnu_table_h = Kokkos::create_mirror_view(dnu_table_d);
+  const auto mu_r_table_d  = DeviceTable1("mu_r_table");
+  const auto dnu_table_d   = DeviceDnuTable("dnu");
+  const auto vn_table_h    = Kokkos::create_mirror_view(vn_table_d);
+  const auto vm_table_h    = Kokkos::create_mirror_view(vm_table_d);
+  const auto revap_table_h = Kokkos::create_mirror_view(revap_table_d);
+  const auto mu_table_h    = Kokkos::create_mirror_view(mu_r_table_d);
+  const auto dnu_table_h   = Kokkos::create_mirror_view(dnu_table_d);
 
   // Need 2d-tables with fortran-style layout
   using P3F         = Functions<Real, HostDevice>;

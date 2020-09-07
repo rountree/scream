@@ -15,6 +15,8 @@ set(SHOC_SRCS
   ${SCREAM_BASE_DIR}/../cam/src/physics/cam/shoc.F90
   atmosphere_macrophysics.cpp
   scream_shoc_interface.F90
+  shoc_diag_second_moments_srf.cpp
+  shoc_diag_second_moments_ubycond.cpp
 )
 
 set(SHOC_HEADERS
@@ -26,7 +28,8 @@ set(SHOC_HEADERS
 # Add ETI source files if not on CUDA
 if (NOT CUDA_BUILD)
   list(APPEND SHOC_SRCS
-      )
+    shoc_calc_shoc_vertflux.cpp
+  )
 endif()
 
 add_library(shoc ${SHOC_SRCS})
