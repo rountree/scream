@@ -38,14 +38,24 @@ namespace scream {
         CloudOptics cloud_optics_sw;
         CloudOptics cloud_optics_lw;
 
+        bool initialized = false;
+
         /* 
          * Define some dummy routines so we can start working on the interface
          * between SCREAM and RRTMGP
          */
         void rrtmgp_initialize() {
 
+            /* If we've already initialized, just exit */
+            if (initialized) { 
+                std::cout << "RRTMGP is already initialized; skipping\n";
+                return; 
+            }
+
             /* Initialize YAKL */
-            yakl::init();
+            if (!yakl::isInitialized()) {
+                yakl::init();
+            }
 
             /* 
              * Names of active gases; this should come from the calling program 
@@ -78,6 +88,9 @@ namespace scream {
             // Load and initialize cloud optical property look-up table information
             load_cld_lutcoeff(cloud_optics_sw, cloud_optics_file_sw);
             load_cld_lutcoeff(cloud_optics_lw, cloud_optics_file_lw);
+
+            // We are now initialized!
+            initialized = true;
         }
 
         void rrtmgp_finalize() {}
