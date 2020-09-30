@@ -61,6 +61,10 @@ namespace scream {
 
         // Setup for standalone (dummy) problem
 
+        // Initialize yakl
+        yakl::init();
+        rrtmgp::rrtmgp_initialize();
+
         // Get reference fluxes from input file; do this here so we can get ncol dimension
         std::string inputfile = "./data/rrtmgp-allsky.nc";
         real2d sw_flux_up_ref;
@@ -114,7 +118,6 @@ namespace scream {
         // Run RRTMGP standalone codes and compare with AD run
         // Do something interesting here...
         // NOTE: these will get replaced with AD stuff that handles these
-        rrtmgp::rrtmgp_initialize();
         rrtmgp::rrtmgp_main(
             p_lay, t_lay, p_lev, t_lev, gas_concs, col_dry,
             sfc_alb_dir, sfc_alb_dif, mu0,
@@ -130,6 +133,15 @@ namespace scream {
         REQUIRE(rrtmgpTest::all_equals(sw_flux_dn_dir_ref, sw_flux_dn_dir));
         REQUIRE(rrtmgpTest::all_equals(lw_flux_up_ref    , lw_flux_up    ));
         REQUIRE(rrtmgpTest::all_equals(lw_flux_dn_ref    , lw_flux_dn    ));
+
+        // Initialize the driver, run the driver, cleanup
+        ad.initialize(atm_comm, ad_params, time);
+        //ad.run(300.0);
+        //ad.finalize();
+        upgm.clean_up();
+
+        // If we got this far, we were able to run the code through the AD
+        REQUIRE(true);
 
     }
 }

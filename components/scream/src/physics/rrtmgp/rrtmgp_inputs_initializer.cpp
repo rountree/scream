@@ -34,7 +34,7 @@ namespace scream {
           return;
         }
   
-        scream_require_msg (count==8,
+        scream_require_msg (count==13,
           "Error! RRTMGPInputsInitializer is expected to init\n"
           "       pmid, pint, tmid, tint, col_dry, gas_vmr, sfc_alb_dir, sfc_alb_dif, mu0, lwp, iwp, rel, rei,\n"
           "       but only " + std::to_string(count) + " of those have been found.\n"

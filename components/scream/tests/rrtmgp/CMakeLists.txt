@@ -15,6 +15,10 @@ set_source_files_properties("${SRC}" PROPERTIES COMPILE_FLAGS "${YAKL_CXX_FLAGS}
 target_include_directories(rrtmgp_stand_alone PUBLIC ${SCREAM_BASE_DIR}/../../externals/yakl)
 target_include_directories(rrtmgp_stand_alone PUBLIC ${SCREAM_BASE_DIR}/src/physics/rrtmgp/tests)
 
+# Copy yaml input file to run directory
+CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/input.yaml
+               ${CMAKE_CURRENT_BINARY_DIR}/input.yaml COPYONLY)
+
 # Copy RRTMGP absorption coefficient lookup tables to local data directory
 FILE (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/data)
 CONFIGURE_FILE(${SCREAM_BASE_DIR}/../eam/src/physics/rrtmgp/external/rrtmgp/data/rrtmgp-data-sw-g224-2018-12-04.nc

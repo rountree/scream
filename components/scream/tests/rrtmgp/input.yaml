@@ -16,4 +16,5 @@ Grids Manager:
   Physics Only:
     Number of global columns:   10
     Number of vertical levels: 128
+    Can Initialize All Inputs: true
 ...

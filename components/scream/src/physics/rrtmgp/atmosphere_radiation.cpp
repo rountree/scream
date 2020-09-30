@@ -1,6 +1,7 @@
 #include "ekat/ekat_assert.hpp"
 #include "physics/rrtmgp/scream_rrtmgp_interface.hpp"
 #include "physics/rrtmgp/atmosphere_radiation.hpp"
+#include "physics/rrtmgp/rrtmgp_inputs_initializer.hpp"
 
 namespace scream {
     RRTMGPRadiation::RRTMGPRadiation (const ekat::Comm& comm, const ekat::ParameterList& params) : m_rrtmgp_comm (comm), m_rrtmgp_params (params) {
@@ -8,6 +9,11 @@ namespace scream {
          * Anything that can be initialized without grid information can be initialized here.
          * I.e., universal constants, options, etc.
          */
+          if (!m_rrtmgp_params.isParameter("Grid")) {
+              m_rrtmgp_params.set("Grid",std::string("SE Physics"));
+          }
+
+          m_initializer = create_field_initializer<RRTMGPInputsInitializer>();
     }  // RRTMGPRadiation::RRTMGPRadiation
 
     void RRTMGPRadiation::set_grids(const std::shared_ptr<const GridsManager> grids_manager) {
@@ -20,20 +26,39 @@ namespace scream {
         m3.set_string("m3");
         auto Wm2 = W / m / m;
         Wm2.set_string("Wm2");
+        auto nondim = m/m;  // dummy unit for non-dimensional fields
+        auto micron = m / 1000000;
 
         auto VL  = FieldTag::VerticalLevel;
         auto COL = FieldTag::Column;
+        auto VAR = FieldTag::Variable;
+        auto CMP = FieldTag::Component;
         constexpr int NVL = 72;  /* TODO THIS NEEDS TO BE CHANGED TO A CONFIGURABLE */
 
         auto grid = grids_manager->get_grid("Physics");
         const int num_dofs = grid->get_num_local_dofs();
         const int nc = num_dofs;
 
+        int nswbands = 14;
+        int nlwbands = 16;
+        int ngas = 8;
+//        string1d gas_names("gas_names",ngas);
+//        gas_names(1) = std::string("h2o");
+//        gas_names(2) = std::string("co2");
+//        gas_names(3) = std::string("o3" );
+//        gas_names(4) = std::string("n2o");
+//        gas_names(5) = std::string("co" );
+//        gas_names(6) = std::string("ch4");
+//        gas_names(7) = std::string("o2" );
+//        gas_names(8) = std::string("n2" );
+
         // Set up dimension layouts
         FieldLayout scalar2d_layout     { {COL   }, {nc    } };
         FieldLayout scalar3d_layout_mid { {COL,VL}, {nc,NVL} };
         FieldLayout scalar3d_layout_int { {COL,VL}, {nc,NVL+1} };
-        FieldLayout gas_layout          { {GAS,COL,VL}, {ngas,nc,NVL} };
+        // Use VAR field tag for gases for now; consider adding a tag?
+        FieldLayout gas_layout          { {VAR,COL,VL}, {ngas,nc,NVL} };
+        FieldLayout scalar2d_swband_layout { {CMP,COL}, {nswbands,nc} };
 
         // Set required (input) fields here
         m_required_fields.emplace("pmid" , scalar3d_layout_mid, Pa, grid->name());
@@ -41,11 +66,11 @@ namespace scream {
         m_required_fields.emplace("tmid" , scalar3d_layout_mid, K , grid->name());
         m_required_fields.emplace("tint" , scalar3d_layout_int, K , grid->name());
         m_required_fields.emplace("col_dry", scalar3d_layout_mid, kgkg, grid->name());
-        //m_required_fields.emplace("gas_names", gas_names_layout, none, grid->name());
+        //m_required_fields.emplace("gas_names", gas_names_layout, nondim, grid->name());
         m_required_fields.emplace("gas_vmr", gas_layout, kgkg, grid->name());
-        m_required_fields.emplace("sfc_alb_dir", scalar2d_band_layout, none, grid->name());
-        m_required_fields.emplace("sfc_alb_dif", scalar2d_band_layout, none, grid->name());
-        m_required_fields.emplace("mu0", scalar2d_layout, none, grid->name());
+        m_required_fields.emplace("sfc_alb_dir", scalar2d_swband_layout, nondim, grid->name());
+        m_required_fields.emplace("sfc_alb_dif", scalar2d_swband_layout, nondim, grid->name());
+        m_required_fields.emplace("mu0", scalar2d_layout, nondim, grid->name());
         m_required_fields.emplace("lwp", scalar3d_layout_mid, kg/m3, grid->name());
         m_required_fields.emplace("iwp", scalar3d_layout_mid, kg/m3, grid->name());
         m_required_fields.emplace("rel", scalar3d_layout_mid, micron, grid->name());
@@ -78,6 +103,7 @@ namespace scream {
         const bool can_init_all = m_rrtmgp_params.get<bool>("Can Initialize All Inputs", false);
         const bool init_all_or_none = m_rrtmgp_params.get<bool>("Must Init All Inputs Or None", true);
         const strvec& initable = can_init_all ? rrtmgp_inputs : allowed_to_init;
+        //const strvec& initable = rrtmgp_inputs;
         if (initable.size()>0) {
             bool all_inited = true, all_uninited = true;
             for (const auto& name : initable) {
