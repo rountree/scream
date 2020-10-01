@@ -136,9 +136,18 @@ namespace scream {
 
         // Initialize the driver, run the driver, cleanup
         ad.initialize(atm_comm, ad_params, time);
-        //ad.run(300.0);
-        //ad.finalize();
+        ad.run(300.0);
+        ad.finalize();
         upgm.clean_up();
+
+        // Check values; need to get fluxes from AD now
+        real2d sw_flux_up_ad ("sw_flux_up_ad" ,ncol,nlay+1);
+        memset(sw_flux_up_ad, 0.0);
+        REQUIRE(rrtmgpTest::all_equals(sw_flux_up_ref    , sw_flux_up_ad    ));
+        REQUIRE(rrtmgpTest::all_equals(sw_flux_dn_ref    , sw_flux_dn    ));
+        REQUIRE(rrtmgpTest::all_equals(sw_flux_dn_dir_ref, sw_flux_dn_dir));
+        REQUIRE(rrtmgpTest::all_equals(lw_flux_up_ref    , lw_flux_up    ));
+        REQUIRE(rrtmgpTest::all_equals(lw_flux_dn_ref    , lw_flux_dn    ));
 
         // If we got this far, we were able to run the code through the AD
         REQUIRE(true);
