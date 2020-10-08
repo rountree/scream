@@ -1,5 +1,5 @@
 # RRTMGP++ requires YAKL
-add_subdirectory(${SCREAM_BASE_DIR}/../../externals/yakl ${CMAKE_CURRENT_BINARY_DIR}/yakl_build)
+add_subdirectory(${SCREAM_BASE_DIR}/../../externals/YAKL ${CMAKE_CURRENT_BINARY_DIR}/YAKL_build)
 target_compile_options(yakl PUBLIC $<$<COMPILE_LANGUAGE:Fortran>:-fno-default-real-8 -fno-default-double-8>)
 target_compile_options(yakl PUBLIC $<$<COMPILE_LANGUAGE:CXX>:-std=c++14>)
 set_target_properties(yakl PROPERTIES CXX_STANDARD 14)
@@ -47,10 +47,10 @@ target_include_directories(rrtmgp PUBLIC ${SCREAM_BASE_DIR}/../cam/src/physics/r
 # Again, this is a hack to get the standalone tests to build that need the mo_garand_atmos_io.h header
 target_include_directories(rrtmgp PUBLIC ${SCREAM_BASE_DIR}/../cam/src/physics/rrtmgp/external/cpp/examples/all-sky)
 target_include_directories(rrtmgp PUBLIC ${SCREAM_BASE_DIR}/../cam/src/physics/rrtmgp/external/cpp/extensions/cloud_optics)
-target_include_directories(rrtmgp PUBLIC ${SCREAM_BASE_DIR}/../../externals/yakl)
+target_include_directories(rrtmgp PUBLIC ${SCREAM_BASE_DIR}/../../externals/YAKL)
 set_target_properties(rrtmgp PROPERTIES Fortran_MODULE_DIRECTORY ${SCREAM_F90_MODULES})
 set_target_properties(rrtmgp PROPERTIES CXX_STANDARD 14)
-target_link_libraries(rrtmgp yakl scream_share ${SCREAM_TPL_LIBRARIES})
+target_link_libraries(rrtmgp yakl physics_share scream_share ${SCREAM_TPL_LIBRARIES})
 
 if (NOT SCREAM_LIB_ONLY)
   add_subdirectory(tests)

@@ -18,7 +18,7 @@ namespace scream {
 
     void RRTMGPRadiation::set_grids(const std::shared_ptr<const GridsManager> grids_manager) {
 
-        using namespace units;
+        using namespace ekat::units;
 
         auto kgkg = kg/kg;
         kgkg.set_string("kg/kg");
@@ -122,13 +122,15 @@ namespace scream {
     
             // In order to gurantee some consistency between inputs, it is best if RRTMGP
             // initializes either none or all of the inputs.
-            scream_require_msg (!init_all_or_none || all_inited || all_uninited,
-                                "Error! Some rrtmgp inputs were marked to be inited by RRTMGP, while others weren't.\n"
-                                "       RRTMGP was requested to init either all or none of the inputs.\n");
+            EKAT_REQUIRE_MSG (
+                !init_all_or_none || all_inited || all_uninited,
+                "Error! Some rrtmgp inputs were marked to be inited by RRTMGP, while others weren't.\n"
+                "       RRTMGP was requested to init either all or none of the inputs.\n"
+            );
         }
     }
     void RRTMGPRadiation::run_impl      (const Real dt) {
-        rrtmgp::rrtmgp_main(); 
+        //rrtmgp::rrtmgp_main(); 
     }
     void RRTMGPRadiation::finalize_impl  () {
         rrtmgp::rrtmgp_finalize();

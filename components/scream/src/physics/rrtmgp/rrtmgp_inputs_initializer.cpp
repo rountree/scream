@@ -34,12 +34,14 @@ namespace scream {
           return;
         }
   
-        scream_require_msg (count==13,
-          "Error! RRTMGPInputsInitializer is expected to init\n"
-          "       pmid, pint, tmid, tint, col_dry, gas_vmr, sfc_alb_dir, sfc_alb_dif, mu0, lwp, iwp, rel, rei,\n"
-          "       but only " + std::to_string(count) + " of those have been found.\n"
-          "       Please, check the atmosphere processes you are using,"
-          "       and make sure they agree on who's initializing each field.\n");
+        EKAT_REQUIRE_MSG(
+            count==13,
+            "Error! RRTMGPInputsInitializer is expected to init\n"
+            "       pmid, pint, tmid, tint, col_dry, gas_vmr, sfc_alb_dir, sfc_alb_dif, mu0, lwp, iwp, rel, rei,\n"
+            "       but only " + std::to_string(count) + " of those have been found.\n"
+            "       Please, check the atmosphere processes you are using,"
+            "       and make sure they agree on who's initializing each field.\n"
+        );
   
         // Get device views
         auto d_pmid = m_fields.at("pmid").get_view();

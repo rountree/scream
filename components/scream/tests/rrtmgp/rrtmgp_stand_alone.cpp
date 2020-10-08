@@ -8,6 +8,7 @@
 #include "physics/share/physics_only_grids_manager.hpp"
 #include "share/atm_process/atmosphere_process.hpp"
 #include "ekat/ekat_parse_yaml_file.hpp"
+#include "ekat/ekat_pack.hpp"
 #include "ekat/ekat.hpp"
 #include "netcdf.h"
 #include "mo_gas_concentrations.h"
@@ -48,16 +49,16 @@ namespace scream {
         proc_factory.register_product("RRTMGP",&create_atmosphere_process<RRTMGPRadiation>);
         gm_factory.register_product("Physics Only",&physics::create_physics_only_grids_manager);
 
+        // Create the grids manager
+        auto& gm_params = ad_params.sublist("Grids Manager");
+        const std::string& gm_type = gm_params.get<std::string>("Type");
+        auto gm = GridsManagerFactory::instance().create(gm_type,atm_comm,gm_params);
+
         // Create the driver
         AtmosphereDriver ad;
 
         // Dummy timestamp
         util::TimeStamp time (0,0,0,0);
-
-        // Initialize the driver, run the driver, cleanup
-        ad.initialize(atm_comm, ad_params, time);
-        ad.run(300.0);
-        ad.finalize();
 
         // Setup for standalone (dummy) problem
 
@@ -137,8 +138,6 @@ namespace scream {
         // Initialize the driver, run the driver, cleanup
         ad.initialize(atm_comm, ad_params, time);
         ad.run(300.0);
-        ad.finalize();
-        upgm.clean_up();
 
         // Check values; need to get fluxes from AD now
         real2d sw_flux_up_ad ("sw_flux_up_ad" ,ncol,nlay+1);
@@ -148,6 +147,8 @@ namespace scream {
         REQUIRE(rrtmgpTest::all_equals(sw_flux_dn_dir_ref, sw_flux_dn_dir));
         REQUIRE(rrtmgpTest::all_equals(lw_flux_up_ref    , lw_flux_up    ));
         REQUIRE(rrtmgpTest::all_equals(lw_flux_dn_ref    , lw_flux_dn    ));
+
+        ad.finalize();
 
         // If we got this far, we were able to run the code through the AD
         REQUIRE(true);
