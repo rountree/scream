@@ -7,9 +7,9 @@
 #include "physics/rrtmgp/scream_rrtmgp_interface.hpp"
 #include "physics/share/physics_only_grids_manager.hpp"
 #include "share/atm_process/atmosphere_process.hpp"
-#include "ekat/ekat_parse_yaml_file.hpp"
-#include "ekat/ekat_pack.hpp"
 #include "ekat/ekat.hpp"
+#include "ekat/ekat_pack.hpp"
+#include "ekat/ekat_parse_yaml_file.hpp"
 #include "netcdf.h"
 #include "mo_gas_concentrations.h"
 #include "mo_garand_atmos_io.h"
@@ -31,6 +31,8 @@ namespace scream {
         using namespace scream;
         using namespace scream::control;
 
+        constexpr int num_iters = 1;
+        
         /* 
          * Setup driver stuff
          */
@@ -140,6 +142,8 @@ namespace scream {
         ad.run(300.0);
 
         // Check values; need to get fluxes from AD now
+        auto& field_repo = ad.get_field_repo();
+        auto& sw_flux_up_test = field_repo.get_field("sw_flux_up", "Physics");
         real2d sw_flux_up_ad ("sw_flux_up_ad" ,ncol,nlay+1);
         memset(sw_flux_up_ad, 0.0);
         REQUIRE(rrtmgpTest::all_equals(sw_flux_up_ref    , sw_flux_up_ad    ));
@@ -152,6 +156,5 @@ namespace scream {
 
         // If we got this far, we were able to run the code through the AD
         REQUIRE(true);
-
     }
 }

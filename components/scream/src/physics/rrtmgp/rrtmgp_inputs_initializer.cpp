@@ -29,17 +29,26 @@ namespace scream {
         count += m_fields.count("iwp");
         count += m_fields.count("rel");
         count += m_fields.count("rei");
+
+        // These are actually outputs, but we need to initialize them in the ad
+        count += m_fields.count("sw_flux_up");
+        count += m_fields.count("sw_flux_dn");
+        count += m_fields.count("sw_flux_dn_dir");
+        count += m_fields.count("lw_flux_up");
+        count += m_fields.count("lw_flux_dn");
   
         if (count==0) {
           return;
         }
   
         EKAT_REQUIRE_MSG(
-            count==13,
+            count==18,
             "Error! RRTMGPInputsInitializer is expected to init\n"
-            "       pmid, pint, tmid, tint, col_dry, gas_vmr, sfc_alb_dir, sfc_alb_dif, mu0, lwp, iwp, rel, rei,\n"
+            "       pmid, pint, tmid, tint, col_dry, gas_vmr, sfc_alb_dir, sfc_alb_dif,\n"
+            "       mu0, lwp, iwp, rel, rei,\n"
+            "       sw_flux_up, sw_flux_dn, sw_flux_dn_dir, lw_flux_up, lw_flux_dn,\n"
             "       but only " + std::to_string(count) + " of those have been found.\n"
-            "       Please, check the atmosphere processes you are using,"
+            "       Please, check the atmosphere processes you are using,\n"
             "       and make sure they agree on who's initializing each field.\n"
         );
   
@@ -57,6 +66,11 @@ namespace scream {
         auto d_iwp = m_fields.at("iwp").get_view();
         auto d_rel = m_fields.at("rel").get_view();
         auto d_rei = m_fields.at("rei").get_view();
+        auto d_sw_flux_up = m_fields.at("sw_flux_up").get_view();
+        auto d_sw_flux_dn = m_fields.at("sw_flux_dn").get_view();
+        auto d_sw_flux_dn_dir = m_fields.at("sw_flux_dn_dir").get_view();
+        auto d_lw_flux_up = m_fields.at("lw_flux_up").get_view();
+        auto d_lw_flux_dn = m_fields.at("lw_flux_dn").get_view();
   
         // Create host mirrors
         auto h_pmid = Kokkos::create_mirror_view(d_pmid);
@@ -72,6 +86,11 @@ namespace scream {
         auto h_iwp = Kokkos::create_mirror_view(d_iwp);
         auto h_rel = Kokkos::create_mirror_view(d_rel);
         auto h_rei = Kokkos::create_mirror_view(d_rei);
+        auto h_sw_flux_up = Kokkos::create_mirror_view(d_sw_flux_up);
+        auto h_sw_flux_dn = Kokkos::create_mirror_view(d_sw_flux_dn);
+        auto h_sw_flux_dn_dir = Kokkos::create_mirror_view(d_sw_flux_dn_dir);
+        auto h_lw_flux_up = Kokkos::create_mirror_view(d_lw_flux_up);
+        auto h_lw_flux_dn = Kokkos::create_mirror_view(d_lw_flux_dn);
   
         // Get host mirrors raw pointers
         auto pmid = h_pmid.data();
@@ -87,6 +106,11 @@ namespace scream {
         auto iwp = h_iwp.data();
         auto rel = h_rel.data();
         auto rei = h_rei.data();
+        auto sw_flux_up = h_sw_flux_up.data();
+        auto sw_flux_dn = h_sw_flux_dn.data();
+        auto sw_flux_dn_dir = h_sw_flux_dn_dir.data();
+        auto lw_flux_up = h_lw_flux_up.data();
+        auto lw_flux_dn = h_lw_flux_dn.data();
   
         // Call initialization routine
         //p3_standalone_init_f90 (q, T, zi, pmid, dpres, ast, ni_activated, nc_nuceat_tend);
@@ -113,6 +137,11 @@ namespace scream {
         Kokkos::deep_copy(d_iwp,h_iwp);
         Kokkos::deep_copy(d_rel,h_rel);
         Kokkos::deep_copy(d_rei,h_rei);
+        Kokkos::deep_copy(d_sw_flux_up,h_sw_flux_up);
+        Kokkos::deep_copy(d_sw_flux_dn,h_sw_flux_dn);
+        Kokkos::deep_copy(d_sw_flux_dn_dir,h_sw_flux_dn_dir);
+        Kokkos::deep_copy(d_lw_flux_up,h_lw_flux_up);
+        Kokkos::deep_copy(d_lw_flux_dn,h_lw_flux_dn);
     }
 
 } // namespace scream

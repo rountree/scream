@@ -76,11 +76,19 @@ namespace scream {
         m_required_fields.emplace("rel", scalar3d_layout_mid, micron, grid->name());
         m_required_fields.emplace("rei", scalar3d_layout_mid, micron, grid->name());
 
+        // Outputs; these needed to be added to both required and computed fields?
+        m_required_fields.emplace("sw_flux_dn", scalar3d_layout_int, Wm2, grid->name());
+        m_required_fields.emplace("sw_flux_up", scalar3d_layout_int, Wm2, grid->name());
+        m_required_fields.emplace("sw_flux_dn_dir", scalar3d_layout_int, Wm2, grid->name());
+        m_required_fields.emplace("lw_flux_up", scalar3d_layout_int, Wm2, grid->name());
+        m_required_fields.emplace("lw_flux_dn", scalar3d_layout_int, Wm2, grid->name());
+
         // Set computed (output) fields
-        m_computed_fields.emplace("flux_sw_dn", scalar3d_layout_int, Wm2, grid->name());
-        m_computed_fields.emplace("flux_sw_up", scalar3d_layout_int, Wm2, grid->name());
-        m_computed_fields.emplace("flux_lw_dn", scalar3d_layout_int, Wm2, grid->name());
-        m_computed_fields.emplace("flux_lw_up", scalar3d_layout_int, Wm2, grid->name());
+        m_computed_fields.emplace("sw_flux_dn", scalar3d_layout_int, Wm2, grid->name());
+        m_computed_fields.emplace("sw_flux_up", scalar3d_layout_int, Wm2, grid->name());
+        m_computed_fields.emplace("sw_flux_dn_dir", scalar3d_layout_int, Wm2, grid->name());
+        m_computed_fields.emplace("lw_flux_up", scalar3d_layout_int, Wm2, grid->name());
+        m_computed_fields.emplace("lw_flux_dn", scalar3d_layout_int, Wm2, grid->name());
 
     }  // RRTMGPRadiation::set_grids
     void RRTMGPRadiation::initialize_impl(const util::TimeStamp& t0) {
@@ -97,7 +105,11 @@ namespace scream {
         // Recall that:
         //  - initable fields may not need initialization (e.g., some other atm proc that
         //    appears earlier in the atm dag might provide them).
-        std::vector<std::string> rrtmgp_inputs = {"pmid","pint","tmid","tint","col_dry","gas_vmr","sfc_alb_dir","sfc_alb_dif","mu0","lwp","iwp","rel","rei"};
+        std::vector<std::string> rrtmgp_inputs = {
+            "pmid","pint","tmid","tint","col_dry","gas_vmr","sfc_alb_dir","sfc_alb_dif",
+            "mu0","lwp","iwp","rel","rei",
+            "sw_flux_up", "sw_flux_dn", "sw_flux_dn_dir", "lw_flux_up", "lw_flux_dn"
+        };
         using strvec = std::vector<std::string>;
         const strvec& allowed_to_init = m_rrtmgp_params.get<strvec>("Initializable Inputs",strvec(0));
         const bool can_init_all = m_rrtmgp_params.get<bool>("Can Initialize All Inputs", false);
