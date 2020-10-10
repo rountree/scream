@@ -1,5 +1,6 @@
 #include "physics/rrtmgp/rrtmgp_inputs_initializer.hpp"
 #include "physics/rrtmgp/scream_rrtmgp_interface.hpp"
+#include "YAKL.h"
 
 #include <array>
 
@@ -92,25 +93,39 @@ namespace scream {
         auto h_lw_flux_up = Kokkos::create_mirror_view(d_lw_flux_up);
         auto h_lw_flux_dn = Kokkos::create_mirror_view(d_lw_flux_dn);
   
-        // Get host mirrors raw pointers
-        auto pmid = h_pmid.data();
-        auto pint = h_pint.data();
-        auto tmid = h_tmid.data();
-        auto tint = h_tint.data();
-        auto col_dry = h_col_dry.data();
-        auto gas_vmr = h_gas_vmr.data();
-        auto sfc_alb_dir = h_sfc_alb_dir.data();
-        auto sfc_alb_dif = h_sfc_alb_dif.data();
-        auto mu0 = h_mu0.data();
-        auto lwp = h_lwp.data();
-        auto iwp = h_iwp.data();
-        auto rel = h_rel.data();
-        auto rei = h_rei.data();
-        auto sw_flux_up = h_sw_flux_up.data();
-        auto sw_flux_dn = h_sw_flux_dn.data();
-        auto sw_flux_dn_dir = h_sw_flux_dn_dir.data();
-        auto lw_flux_up = h_lw_flux_up.data();
-        auto lw_flux_dn = h_lw_flux_dn.data();
+        // RRTMGP initialization routine needs YAKL Fortran-style arrays, which
+        // we can map from the C-style Kokkos views. Note that this assumes that
+        // the Kokkos views are LayoutRight, and that dimension ordering is
+        // opposite what RRTMGP expects (that is, (nx,ny,nz) -> (nz,ny,nx))
+        // Read in dummy Garand atmosphere; if this were an actual model simulation,
+        // these would be passed as inputs to the driver
+        // NOTE: set ncol to size of col_flx dimension in the input file. This is so
+        // that we can compare to the reference data provided in that file. Note that
+        // this will copy the first column of the input data (the first profile) ncol
+        // times. We will then fill some fraction of these columns with clouds for
+        // the test problem.
+        int ngas =  8;
+        int ncol = 10;
+        int nlay = 60;
+        int nswbands = 16;
+        yakl::Array<double,2,memHost,yakl::styleFortran> p_lay  ("p_lay", h_pmid.data(), ncol, nlay);
+        yakl::Array<double,2,memHost,yakl::styleFortran> t_lay  ("t_lay", h_tmid.data(), ncol, nlay);
+        yakl::Array<double,2,memHost,yakl::styleFortran> p_lev  ("p_lev", h_pint.data(), ncol, nlay+1);
+        yakl::Array<double,2,memHost,yakl::styleFortran> t_lev  ("t_lev", h_tint.data(), ncol, nlay+1);
+        yakl::Array<double,2,memHost,yakl::styleFortran> col_dry("col_dry", h_col_dry.data(), ncol, nlay);
+        yakl::Array<double,3,memHost,yakl::styleFortran> gas_vmr("gas_vmr", h_gas_vmr.data(), ngas, ncol, nlay);
+        yakl::Array<double,2,memHost,yakl::styleFortran> sfc_alb_dir("sfc_alb_dir", h_sfc_alb_dir.data(), ncol, nswbands);
+        yakl::Array<double,2,memHost,yakl::styleFortran> sfc_alb_dif("sfc_alb_dif", h_sfc_alb_dif.data(), ncol, nswbands);
+        yakl::Array<double,1,memHost,yakl::styleFortran> mu0("mu0", h_mu0.data(), ncol);
+        yakl::Array<double,2,memHost,yakl::styleFortran> lwp("lwp", h_lwp.data(), ncol, nlay);
+        yakl::Array<double,2,memHost,yakl::styleFortran> iwp("iwp", h_iwp.data(), ncol, nlay);
+        yakl::Array<double,2,memHost,yakl::styleFortran> rel("rel", h_rel.data(), ncol, nlay);
+        yakl::Array<double,2,memHost,yakl::styleFortran> rei("rei", h_rei.data(), ncol, nlay);
+//      rrtmgpTest::dummy_atmos(
+//          inputfile, ncol, p_lay, t_lay, p_lev, t_lev, gas_concs, col_dry,
+//          sfc_alb_dir, sfc_alb_dif, mu0,
+//          lwp, iwp, rel, rei
+//      );
   
         // Call initialization routine
         //p3_standalone_init_f90 (q, T, zi, pmid, dpres, ast, ni_activated, nc_nuceat_tend);
