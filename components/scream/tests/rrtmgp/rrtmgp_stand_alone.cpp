@@ -137,20 +137,20 @@ namespace scream {
         REQUIRE(rrtmgpTest::all_equals(lw_flux_up_ref    , lw_flux_up    ));
         REQUIRE(rrtmgpTest::all_equals(lw_flux_dn_ref    , lw_flux_dn    ));
 
+
         // Initialize the driver, run the driver, cleanup
         ad.initialize(atm_comm, ad_params, time);
         ad.run(300.0);
 
         // Check values; need to get fluxes from AD now
         auto& field_repo = ad.get_field_repo();
-        auto& sw_flux_up_test = field_repo.get_field("sw_flux_up", "Physics");
-        real2d sw_flux_up_ad ("sw_flux_up_ad" ,ncol,nlay+1);
-        memset(sw_flux_up_ad, 0.0);
-        REQUIRE(rrtmgpTest::all_equals(sw_flux_up_ref    , sw_flux_up_ad    ));
-        REQUIRE(rrtmgpTest::all_equals(sw_flux_dn_ref    , sw_flux_dn    ));
-        REQUIRE(rrtmgpTest::all_equals(sw_flux_dn_dir_ref, sw_flux_dn_dir));
-        REQUIRE(rrtmgpTest::all_equals(lw_flux_up_ref    , lw_flux_up    ));
-        REQUIRE(rrtmgpTest::all_equals(lw_flux_dn_ref    , lw_flux_dn    ));
+        auto& d_sw_flux_up = field_repo.get_field("sw_flux_up", "Physics").get_view();
+        yakl::Array<double,2,memDevice,yakl::styleFortran> sw_flux_up_test("sw_flux_up_test", d_sw_flux_up.data(), ncol, nlay+1);
+        REQUIRE(rrtmgpTest::all_equals(sw_flux_up_ref    , sw_flux_up_test  ));
+        //REQUIRE(rrtmgpTest::all_equals(sw_flux_dn_ref    , sw_flux_dn    ));
+        //REQUIRE(rrtmgpTest::all_equals(sw_flux_dn_dir_ref, sw_flux_dn_dir));
+        //REQUIRE(rrtmgpTest::all_equals(lw_flux_up_ref    , lw_flux_up    ));
+        //REQUIRE(rrtmgpTest::all_equals(lw_flux_dn_ref    , lw_flux_dn    ));
 
         ad.finalize();
 
