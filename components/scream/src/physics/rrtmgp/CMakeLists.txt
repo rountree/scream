@@ -9,6 +9,7 @@ set(RRTMGP_SRCS
   atmosphere_radiation.cpp
   scream_rrtmgp_interface.cpp
   rrtmgp_inputs_initializer.cpp
+  tests/rrtmgp_test_utils.cpp
   ${SCREAM_BASE_DIR}/../cam/src/physics/rrtmgp/external/cpp/rrtmgp/kernels/mo_gas_optics_kernels.cpp
   ${SCREAM_BASE_DIR}/../cam/src/physics/rrtmgp/external/cpp/rrtmgp/mo_rrtmgp_constants.cpp
   ${SCREAM_BASE_DIR}/../cam/src/physics/rrtmgp/external/cpp/rrtmgp/mo_rrtmgp_util_reorder.cpp
@@ -48,6 +49,7 @@ target_include_directories(rrtmgp PUBLIC ${SCREAM_BASE_DIR}/../cam/src/physics/r
 target_include_directories(rrtmgp PUBLIC ${SCREAM_BASE_DIR}/../cam/src/physics/rrtmgp/external/cpp/examples/all-sky)
 target_include_directories(rrtmgp PUBLIC ${SCREAM_BASE_DIR}/../cam/src/physics/rrtmgp/external/cpp/extensions/cloud_optics)
 target_include_directories(rrtmgp PUBLIC ${SCREAM_BASE_DIR}/../../externals/YAKL)
+target_include_directories(rrtmgp PUBLIC tests)
 set_target_properties(rrtmgp PROPERTIES Fortran_MODULE_DIRECTORY ${SCREAM_F90_MODULES})
 set_target_properties(rrtmgp PROPERTIES CXX_STANDARD 14)
 target_link_libraries(rrtmgp yakl physics_share scream_share ${SCREAM_TPL_LIBRARIES})
