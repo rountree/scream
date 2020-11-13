@@ -2,6 +2,7 @@
 #include "physics/rrtmgp/scream_rrtmgp_interface.hpp"
 #include "physics/rrtmgp/atmosphere_radiation.hpp"
 #include "physics/rrtmgp/rrtmgp_inputs_initializer.hpp"
+#include "mo_gas_concentrations.h"
 
 namespace scream {
     RRTMGPRadiation::RRTMGPRadiation (const ekat::Comm& comm, const ekat::ParameterList& params) : m_rrtmgp_comm (comm), m_rrtmgp_params (params) {
@@ -33,11 +34,12 @@ namespace scream {
         auto COL = FieldTag::Column;
         auto VAR = FieldTag::Variable;
         auto CMP = FieldTag::Component;
-        constexpr int NVL = 72;  /* TODO THIS NEEDS TO BE CHANGED TO A CONFIGURABLE */
+        constexpr int NVL = 42;  /* TODO THIS NEEDS TO BE CHANGED TO A CONFIGURABLE */
 
         auto grid = grids_manager->get_grid("Physics");
         const int num_dofs = grid->get_num_local_dofs();
-        const int nc = num_dofs;
+        const int nc = 10; //num_dofs;
+        //const int nc = num_dofs;
 
         int nswbands = 14;
         int nlwbands = 16;
@@ -91,6 +93,7 @@ namespace scream {
         m_computed_fields.emplace("lw_flux_dn", scalar3d_layout_int, Wm2, grid->name());
 
     }  // RRTMGPRadiation::set_grids
+
     void RRTMGPRadiation::initialize_impl(const util::TimeStamp& t0) {
         rrtmgp::rrtmgp_initialize();
 
@@ -142,7 +145,96 @@ namespace scream {
         }
     }
     void RRTMGPRadiation::run_impl      (const Real dt) {
-        //rrtmgp::rrtmgp_main(); 
+        // Get data from AD; RRTMGP wants YAKL views
+        // TODO: how can I just keep these around without having to create every time?
+        // They are just pointers, so should be able to keep them somewhere else and just associate them once?
+
+        // Get device views
+        auto d_pmid = m_rrtmgp_fields_in.at("pmid").get_view();
+        auto d_pint = m_rrtmgp_fields_in.at("pint").get_view();
+        auto d_tmid = m_rrtmgp_fields_in.at("tmid").get_view();
+        auto d_tint = m_rrtmgp_fields_in.at("tint").get_view();
+        auto d_col_dry = m_rrtmgp_fields_in.at("col_dry").get_view();
+        auto d_gas_vmr = m_rrtmgp_fields_in.at("gas_vmr").get_view();
+        auto d_sfc_alb_dir = m_rrtmgp_fields_in.at("sfc_alb_dir").get_view();
+        auto d_sfc_alb_dif = m_rrtmgp_fields_in.at("sfc_alb_dif").get_view();
+        auto d_mu0 = m_rrtmgp_fields_in.at("mu0").get_view();
+        auto d_lwp = m_rrtmgp_fields_in.at("lwp").get_view();
+        auto d_iwp = m_rrtmgp_fields_in.at("iwp").get_view();
+        auto d_rel = m_rrtmgp_fields_in.at("rel").get_view();
+        auto d_rei = m_rrtmgp_fields_in.at("rei").get_view();
+        auto d_sw_flux_up = m_rrtmgp_fields_out.at("sw_flux_up").get_view();
+        auto d_sw_flux_dn = m_rrtmgp_fields_out.at("sw_flux_dn").get_view();
+        auto d_sw_flux_dn_dir = m_rrtmgp_fields_out.at("sw_flux_dn_dir").get_view();
+        auto d_lw_flux_up = m_rrtmgp_fields_out.at("lw_flux_up").get_view();
+        auto d_lw_flux_dn = m_rrtmgp_fields_out.at("lw_flux_dn").get_view();
+ 
+        // Map to YAKL
+        int ngas =  8;
+        int ncol = 10;
+        int nlay = 42;
+        int nswbands = 14;
+        yakl::Array<double,2,memDevice,yakl::styleFortran> p_lay  ("p_lay", const_cast<Real*>(d_pmid.data()), ncol, nlay);
+        yakl::Array<double,2,memDevice,yakl::styleFortran> t_lay  ("t_lay", const_cast<Real*>(d_tmid.data()), ncol, nlay);
+        yakl::Array<double,2,memDevice,yakl::styleFortran> p_lev  ("p_lev",const_cast<Real*>(d_pint.data()), ncol, nlay+1);
+        yakl::Array<double,2,memDevice,yakl::styleFortran> t_lev  ("t_lev",const_cast<Real*>(d_tint.data()), ncol, nlay+1);
+        yakl::Array<double,2,memDevice,yakl::styleFortran> col_dry("col_dry",const_cast<Real*>(d_col_dry.data()), ncol, nlay);
+        yakl::Array<double,3,memDevice,yakl::styleFortran> gas_vmr("gas_vmr",const_cast<Real*>(d_gas_vmr.data()), ngas, ncol, nlay);
+        yakl::Array<double,2,memDevice,yakl::styleFortran> sfc_alb_dir("sfc_alb_dir",const_cast<Real*>(d_sfc_alb_dir.data()), nswbands, ncol);
+        yakl::Array<double,2,memDevice,yakl::styleFortran> sfc_alb_dif("sfc_alb_dif",const_cast<Real*>(d_sfc_alb_dif.data()), nswbands, ncol);
+        yakl::Array<double,1,memDevice,yakl::styleFortran> mu0("mu0",const_cast<Real*>(d_mu0.data()), ncol);
+        yakl::Array<double,2,memDevice,yakl::styleFortran> lwp("lwp",const_cast<Real*>(d_lwp.data()), ncol, nlay);
+        yakl::Array<double,2,memDevice,yakl::styleFortran> iwp("iwp",const_cast<Real*>(d_iwp.data()), ncol, nlay);
+        yakl::Array<double,2,memDevice,yakl::styleFortran> rel("rel",const_cast<Real*>(d_rel.data()), ncol, nlay);
+        yakl::Array<double,2,memDevice,yakl::styleFortran> rei("rei",const_cast<Real*>(d_rei.data()), ncol, nlay);
+        yakl::Array<double,2,memDevice,yakl::styleFortran> sw_flux_up("sw_flux_up", d_sw_flux_up.data(), ncol, nlay+1);
+        yakl::Array<double,2,memDevice,yakl::styleFortran> sw_flux_dn("sw_flux_dn", d_sw_flux_dn.data(), ncol, nlay+1);
+        yakl::Array<double,2,memDevice,yakl::styleFortran> sw_flux_dn_dir("sw_flux_dn_dir", d_sw_flux_dn_dir.data(), ncol, nlay+1);
+        yakl::Array<double,2,memDevice,yakl::styleFortran> lw_flux_up("lw_flux_up", d_lw_flux_up.data(), ncol, nlay+1);
+        yakl::Array<double,2,memDevice,yakl::styleFortran> lw_flux_dn("lw_flux_dn", d_lw_flux_dn.data(), ncol, nlay+1);
+
+        // Make GasConcs from gas_vmr and gas_names
+        string1d gas_names("gas_names",ngas);
+        gas_names(1) = std::string("h2o");
+        gas_names(2) = std::string("co2");
+        gas_names(3) = std::string("o3" );
+        gas_names(4) = std::string("n2o");
+        gas_names(5) = std::string("co" );
+        gas_names(6) = std::string("ch4");
+        gas_names(7) = std::string("o2" );
+        gas_names(8) = std::string("n2" );
+
+        // Initialize GasConcs object with an "ncol" given from the calling program
+        GasConcs gas_concs;
+        gas_concs.init(gas_names,ncol,nlay);
+        real2d tmp2d;
+        tmp2d = real2d("tmp", ncol, nlay);
+        for (int igas = 1; igas <= ngas; igas++) {
+            for (int icol = 1; icol <= ncol; icol++) {
+                for (int ilay = 1; ilay <= nlay; ilay++) {
+                    tmp2d(icol,ilay) = gas_vmr(igas,icol,ilay);
+                }
+            }
+            gas_concs.set_vmr(gas_names(igas), tmp2d);
+        } 
+
+        // Run RRTMGP driver
+        for (int ilay = 1; ilay <= nlay; ilay++) {
+            std::cout << "p_lay at runtime: " << p_lay(1,ilay) << std::endl;
+            //std::cout << "gas_vmr at runtime: " << gas_vmr(1,1,ilay) << std::endl;
+        }
+        rrtmgp::rrtmgp_main( 
+          p_lay, t_lay, p_lev, t_lev,
+          gas_concs, col_dry,
+          sfc_alb_dir, sfc_alb_dif, mu0,
+          lwp, iwp, rel, rei,
+          sw_flux_up, sw_flux_dn, sw_flux_dn_dir,
+          lw_flux_up, lw_flux_dn
+        );
+
+        std::cout << "sw_flux_up(1,1):" << sw_flux_up(1,1) << std::endl;
+        std::cout << "sw_flux_up(2,2):" << sw_flux_up(2,2) << std::endl;
+
     }
     void RRTMGPRadiation::finalize_impl  () {
         rrtmgp::rrtmgp_finalize();

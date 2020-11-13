@@ -1,5 +1,6 @@
 #include "physics/rrtmgp/rrtmgp_inputs_initializer.hpp"
 #include "physics/rrtmgp/scream_rrtmgp_interface.hpp"
+#include "rrtmgp_test_utils.hpp"
 #include "YAKL.h"
 
 #include <array>
@@ -73,26 +74,9 @@ namespace scream {
         auto d_lw_flux_up = m_fields.at("lw_flux_up").get_view();
         auto d_lw_flux_dn = m_fields.at("lw_flux_dn").get_view();
   
-        // Create host mirrors
+        // Create host mirror views
         auto h_pmid = Kokkos::create_mirror_view(d_pmid);
-        auto h_pint = Kokkos::create_mirror_view(d_pint);
-        auto h_tmid = Kokkos::create_mirror_view(d_tmid);
-        auto h_tint = Kokkos::create_mirror_view(d_tint);
-        auto h_col_dry = Kokkos::create_mirror_view(d_col_dry);
-        auto h_gas_vmr = Kokkos::create_mirror_view(d_gas_vmr);
-        auto h_sfc_alb_dir = Kokkos::create_mirror_view(d_sfc_alb_dir);
-        auto h_sfc_alb_dif = Kokkos::create_mirror_view(d_sfc_alb_dif);
-        auto h_mu0 = Kokkos::create_mirror_view(d_mu0);
-        auto h_lwp = Kokkos::create_mirror_view(d_lwp);
-        auto h_iwp = Kokkos::create_mirror_view(d_iwp);
-        auto h_rel = Kokkos::create_mirror_view(d_rel);
-        auto h_rei = Kokkos::create_mirror_view(d_rei);
-        auto h_sw_flux_up = Kokkos::create_mirror_view(d_sw_flux_up);
-        auto h_sw_flux_dn = Kokkos::create_mirror_view(d_sw_flux_dn);
-        auto h_sw_flux_dn_dir = Kokkos::create_mirror_view(d_sw_flux_dn_dir);
-        auto h_lw_flux_up = Kokkos::create_mirror_view(d_lw_flux_up);
-        auto h_lw_flux_dn = Kokkos::create_mirror_view(d_lw_flux_dn);
-  
+
         // RRTMGP initialization routine needs YAKL Fortran-style arrays, which
         // we can map from the C-style Kokkos views. Note that this assumes that
         // the Kokkos views are LayoutRight, and that dimension ordering is
@@ -106,57 +90,52 @@ namespace scream {
         // the test problem.
         int ngas =  8;
         int ncol = 10;
-        int nlay = 60;
-        int nswbands = 16;
-        yakl::Array<double,2,memHost,yakl::styleFortran> p_lay  ("p_lay", h_pmid.data(), ncol, nlay);
-        yakl::Array<double,2,memHost,yakl::styleFortran> t_lay  ("t_lay", h_tmid.data(), ncol, nlay);
-        yakl::Array<double,2,memHost,yakl::styleFortran> p_lev  ("p_lev", h_pint.data(), ncol, nlay+1);
-        yakl::Array<double,2,memHost,yakl::styleFortran> t_lev  ("t_lev", h_tint.data(), ncol, nlay+1);
-        yakl::Array<double,2,memHost,yakl::styleFortran> col_dry("col_dry", h_col_dry.data(), ncol, nlay);
-        yakl::Array<double,3,memHost,yakl::styleFortran> gas_vmr("gas_vmr", h_gas_vmr.data(), ngas, ncol, nlay);
-        yakl::Array<double,2,memHost,yakl::styleFortran> sfc_alb_dir("sfc_alb_dir", h_sfc_alb_dir.data(), ncol, nswbands);
-        yakl::Array<double,2,memHost,yakl::styleFortran> sfc_alb_dif("sfc_alb_dif", h_sfc_alb_dif.data(), ncol, nswbands);
-        yakl::Array<double,1,memHost,yakl::styleFortran> mu0("mu0", h_mu0.data(), ncol);
-        yakl::Array<double,2,memHost,yakl::styleFortran> lwp("lwp", h_lwp.data(), ncol, nlay);
-        yakl::Array<double,2,memHost,yakl::styleFortran> iwp("iwp", h_iwp.data(), ncol, nlay);
-        yakl::Array<double,2,memHost,yakl::styleFortran> rel("rel", h_rel.data(), ncol, nlay);
-        yakl::Array<double,2,memHost,yakl::styleFortran> rei("rei", h_rei.data(), ncol, nlay);
-//      rrtmgpTest::dummy_atmos(
-//          inputfile, ncol, p_lay, t_lay, p_lev, t_lev, gas_concs, col_dry,
-//          sfc_alb_dir, sfc_alb_dif, mu0,
-//          lwp, iwp, rel, rei
-//      );
-  
-        // Call initialization routine
-        //p3_standalone_init_f90 (q, T, zi, pmid, dpres, ast, ni_activated, nc_nuceat_tend);
-        //std::string inputfile;
-        //dummy_atmos(
-        //    std::string inputfile,
-        //    int ncol, real2d &p_lay, real2d &t_lay, real2d &p_lev, real2d &t_lev, GasConcs &gas_concs, real2d &col_dry,
-        //    real2d &sfc_alb_dir, real2d &sfc_alb_dif, real1d &mu0,
-        //    real2d &lwp, real2d &iwp, real2d &rel, real2d &rei
-        //);
+        int nlay = 42;
+        int nswbands = 14;
+        yakl::Array<double,2,memDevice,yakl::styleFortran> p_lay  ("p_lay", d_pmid.data(), ncol, nlay);
+        yakl::Array<double,2,memDevice,yakl::styleFortran> t_lay  ("t_lay", d_tmid.data(), ncol, nlay);
+        yakl::Array<double,2,memDevice,yakl::styleFortran> p_lev  ("p_lev", d_pint.data(), ncol, nlay+1);
+        yakl::Array<double,2,memDevice,yakl::styleFortran> t_lev  ("t_lev", d_tint.data(), ncol, nlay+1);
+        yakl::Array<double,2,memDevice,yakl::styleFortran> col_dry("col_dry", d_col_dry.data(), ncol, nlay);
+        yakl::Array<double,3,memDevice,yakl::styleFortran> gas_vmr("gas_vmr", d_gas_vmr.data(), ngas, ncol, nlay);
+        yakl::Array<double,2,memDevice,yakl::styleFortran> sfc_alb_dir("sfc_alb_dir", d_sfc_alb_dir.data(), nswbands, ncol);
+        yakl::Array<double,2,memDevice,yakl::styleFortran> sfc_alb_dif("sfc_alb_dif", d_sfc_alb_dif.data(), nswbands, ncol);
+        yakl::Array<double,1,memDevice,yakl::styleFortran> mu0("mu0", d_mu0.data(), ncol);
+        yakl::Array<double,2,memDevice,yakl::styleFortran> lwp("lwp", d_lwp.data(), ncol, nlay);
+        yakl::Array<double,2,memDevice,yakl::styleFortran> iwp("iwp", d_iwp.data(), ncol, nlay);
+        yakl::Array<double,2,memDevice,yakl::styleFortran> rel("rel", d_rel.data(), ncol, nlay);
+        yakl::Array<double,2,memDevice,yakl::styleFortran> rei("rei", d_rei.data(), ncol, nlay);
 
-  
-        // Deep copy back to device
-        Kokkos::deep_copy(d_pmid,h_pmid);
-        Kokkos::deep_copy(d_pint,h_pint);
-        Kokkos::deep_copy(d_tmid,h_tmid);
-        Kokkos::deep_copy(d_tint,h_tint);
-        Kokkos::deep_copy(d_col_dry,h_col_dry);
-        Kokkos::deep_copy(d_gas_vmr,h_gas_vmr);
-        Kokkos::deep_copy(d_sfc_alb_dir,h_sfc_alb_dir);
-        Kokkos::deep_copy(d_sfc_alb_dif,h_sfc_alb_dif);
-        Kokkos::deep_copy(d_mu0,h_mu0);
-        Kokkos::deep_copy(d_lwp,h_lwp);
-        Kokkos::deep_copy(d_iwp,h_iwp);
-        Kokkos::deep_copy(d_rel,h_rel);
-        Kokkos::deep_copy(d_rei,h_rei);
-        Kokkos::deep_copy(d_sw_flux_up,h_sw_flux_up);
-        Kokkos::deep_copy(d_sw_flux_dn,h_sw_flux_dn);
-        Kokkos::deep_copy(d_sw_flux_dn_dir,h_sw_flux_dn_dir);
-        Kokkos::deep_copy(d_lw_flux_up,h_lw_flux_up);
-        Kokkos::deep_copy(d_lw_flux_dn,h_lw_flux_dn);
+        // Read in values from input file
+        std::string inputfile = "data/rrtmgp-allsky.nc";
+        GasConcs gas_concs;
+        rrtmgpTest::dummy_atmos(
+            inputfile, ncol, p_lay, t_lay, p_lev, t_lev, gas_concs, col_dry,
+            sfc_alb_dir, sfc_alb_dif, mu0,
+            lwp, iwp, rel, rei
+        );
+
+        // Pull gas volume mixing ratios out of gas_concs to populate gas_vmr array.
+        // The reason for this is we want to use the RRTMGP routine to read the
+        // data, but we want to store the data as something easily representable
+        // with Kokkos views or yakl arrays.
+        //gas_vmr = gas_concs.concs;
+        string1d gas_names("gas_names", ngas); 
+        for (int igas = 1; igas <= ngas; igas++) {
+            gas_names(igas) = gas_concs.gas_name(igas);
+            for (int icol = 1; icol <= ncol; icol++) {
+                for (int ilay = 1; ilay <= nlay; ilay++) {
+                    gas_vmr(igas,icol,ilay) = gas_concs.concs(icol,ilay,igas);
+                }
+            }
+        }
+        // Check values
+        for (int ilay = 1; ilay <= nlay; ilay++) {
+            std::cout << "p_lay from init: " << p_lay(1,ilay) << std::endl;
+            //std::cout << "gas_vmr at init: " << gas_vmr(1,1,ilay) << std::endl;
+        }
+
+        // Copy back to host?
+        Kokkos::deep_copy(h_pmid, d_pmid); 
     }
-
 } // namespace scream
