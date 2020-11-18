@@ -73,7 +73,7 @@ namespace scream {
             gas_names(8) = std::string("n2" );
 
             // Initialize GasConcs object but populate with dummy values 
-            int ncol = 10;
+            int ncol = 128;
             int nlay = 2;
             GasConcs gas_concs;
             gas_concs.init(gas_names,ncol,nlay);

@@ -38,8 +38,8 @@ namespace scream {
 
         auto grid = grids_manager->get_grid("Physics");
         const int num_dofs = grid->get_num_local_dofs();
-        const int nc = 10; //num_dofs;
-        //const int nc = num_dofs;
+        //const int ncol = 128; //num_dofs;
+        const int ncol = num_dofs;
 
         int nswbands = 14;
         int nlwbands = 16;
@@ -55,12 +55,12 @@ namespace scream {
 //        gas_names(8) = std::string("n2" );
 
         // Set up dimension layouts
-        FieldLayout scalar2d_layout     { {COL   }, {nc    } };
-        FieldLayout scalar3d_layout_mid { {COL,VL}, {nc,NVL} };
-        FieldLayout scalar3d_layout_int { {COL,VL}, {nc,NVL+1} };
+        FieldLayout scalar2d_layout     { {COL   }, {ncol    } };
+        FieldLayout scalar3d_layout_mid { {COL,VL}, {ncol,NVL} };
+        FieldLayout scalar3d_layout_int { {COL,VL}, {ncol,NVL+1} };
         // Use VAR field tag for gases for now; consider adding a tag?
-        FieldLayout gas_layout          { {VAR,COL,VL}, {ngas,nc,NVL} };
-        FieldLayout scalar2d_swband_layout { {CMP,COL}, {nswbands,nc} };
+        FieldLayout gas_layout          { {VAR,COL,VL}, {ngas,ncol,NVL} };
+        FieldLayout scalar2d_swband_layout { {CMP,COL}, {nswbands,ncol} };
 
         // Set required (input) fields here
         m_required_fields.emplace("pmid" , scalar3d_layout_mid, Pa, grid->name());
@@ -171,7 +171,7 @@ namespace scream {
  
         // Map to YAKL
         int ngas =  8;
-        int ncol = 10;
+        int ncol = 128;
         int nlay = 42;
         int nswbands = 14;
         yakl::Array<double,2,memDevice,yakl::styleFortran> p_lay  ("p_lay", const_cast<Real*>(d_pmid.data()), ncol, nlay);
@@ -219,10 +219,6 @@ namespace scream {
         } 
 
         // Run RRTMGP driver
-        for (int ilay = 1; ilay <= nlay; ilay++) {
-            std::cout << "p_lay at runtime: " << p_lay(1,ilay) << std::endl;
-            //std::cout << "gas_vmr at runtime: " << gas_vmr(1,1,ilay) << std::endl;
-        }
         rrtmgp::rrtmgp_main( 
           p_lay, t_lay, p_lev, t_lev,
           gas_concs, col_dry,
@@ -231,11 +227,8 @@ namespace scream {
           sw_flux_up, sw_flux_dn, sw_flux_dn_dir,
           lw_flux_up, lw_flux_dn
         );
-
-        std::cout << "sw_flux_up(1,1):" << sw_flux_up(1,1) << std::endl;
-        std::cout << "sw_flux_up(2,2):" << sw_flux_up(2,2) << std::endl;
-
     }
+
     void RRTMGPRadiation::finalize_impl  () {
         rrtmgp::rrtmgp_finalize();
     }

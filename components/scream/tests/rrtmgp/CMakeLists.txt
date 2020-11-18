@@ -25,11 +25,11 @@ CONFIGURE_FILE(${SCREAM_BASE_DIR}/../eam/src/physics/rrtmgp/external/rrtmgp/data
                ${CMAKE_CURRENT_BINARY_DIR}/data COPYONLY)
 CONFIGURE_FILE(${SCREAM_BASE_DIR}/../eam/src/physics/rrtmgp/external/rrtmgp/data/rrtmgp-data-lw-g256-2018-12-04.nc
                ${CMAKE_CURRENT_BINARY_DIR}/data COPYONLY)
-CONFIGURE_FILE(${SCREAM_BASE_DIR}/../cam/src/physics/rrtmgp/external/examples/all-sky/rrtmgp-clrsky.nc
-               ${CMAKE_CURRENT_BINARY_DIR}/data COPYONLY)
+#CONFIGURE_FILE(${SCREAM_BASE_DIR}/../eam/src/physics/rrtmgp/external/examples/all-sky/rrtmgp-clrsky.nc
+#               ${CMAKE_CURRENT_BINARY_DIR}/data COPYONLY)
 CONFIGURE_FILE(${SCREAM_BASE_DIR}/src/physics/rrtmgp/tests/rrtmgp-allsky.nc
                ${CMAKE_CURRENT_BINARY_DIR}/data COPYONLY)
-CONFIGURE_FILE(${SCREAM_BASE_DIR}/../cam/src/physics/rrtmgp/external/extensions/cloud_optics/rrtmgp-cloud-optics-coeffs-sw.nc
+CONFIGURE_FILE(${SCREAM_BASE_DIR}/../eam/src/physics/rrtmgp/external/extensions/cloud_optics/rrtmgp-cloud-optics-coeffs-sw.nc
                ${CMAKE_CURRENT_BINARY_DIR}/data COPYONLY)
-CONFIGURE_FILE(${SCREAM_BASE_DIR}/../cam/src/physics/rrtmgp/external/extensions/cloud_optics/rrtmgp-cloud-optics-coeffs-lw.nc
+CONFIGURE_FILE(${SCREAM_BASE_DIR}/../eam/src/physics/rrtmgp/external/extensions/cloud_optics/rrtmgp-cloud-optics-coeffs-lw.nc
                ${CMAKE_CURRENT_BINARY_DIR}/data COPYONLY)
