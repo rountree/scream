@@ -1,4 +1,4 @@
-#include "shoc_update_prognostics_implicit_impl.hpp"
+#include "shoc_sfc_fluxes_impl.hpp"
 
 namespace scream {
 namespace shoc {

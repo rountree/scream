@@ -451,6 +451,17 @@ end subroutine dp_inverse_f
     real(kind=c_real) , intent(inout), dimension(shcol, nlev) :: var
   end subroutine vd_shoc_decomp_and_solve_f
 
+  subroutine sfc_fluxes_f(shcol, num_tracer, dtime, rho_zi_sfc, rdp_zt_sfc, wthl_sfc, wqw_sfc, wtke_sfc, wtracer_sfc, thetal, qw, tke, wtracer) bind(C)
+    use iso_c_binding
+
+    integer(kind=c_int) , value, intent(in) :: shcol, num_tracer
+    real(kind=c_real) , value, intent(in) :: dtime
+    real(kind=c_real) , intent(in), dimension(shcol) :: rho_zi_sfc, rdp_zt_sfc, wthl_sfc, wqw_sfc, wtke_sfc
+    real(kind=c_real) , intent(in), dimension(shcol, num_tracer) :: wtracer_sfc
+    real(kind=c_real) , intent(inout), dimension(shcol) :: thetal, qw, tke
+    real(kind=c_real) , intent(inout), dimension(shcol, num_tracer) :: wtracer
+  end subroutine sfc_fluxes_f
+
 end interface
 
 end module shoc_iso_f

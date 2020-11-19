@@ -175,7 +175,63 @@ struct UnitWrap::UnitTest<D>::TestImpSfcFluxes {
 
   static void run_bfb()
   {
-    // TODO
+    SfcFluxesData SDS_f90[] = {
+      //            shcol, num_tracers, dtime
+      SfcFluxesData(10, 50, 10),
+      SfcFluxesData(10, 32, 5.5),
+      SfcFluxesData(7,  17, 1),
+      SfcFluxesData(2,  6, 0.05),
+    };
+
+    static constexpr Int num_runs = sizeof(SDS_f90) / sizeof(SfcFluxesData);
+
+    // Generate random input data
+    for (auto& d : SDS_f90) {
+      d.randomize();
+    }
+
+    // Create copies of data for use by cxx. Needs to happen before fortran calls so that
+    // inout data is in original state
+    SfcFluxesData SDS_cxx[] = {
+      SfcFluxesData(SDS_f90[0]),
+      SfcFluxesData(SDS_f90[1]),
+      SfcFluxesData(SDS_f90[2]),
+      SfcFluxesData(SDS_f90[3]),
+    };
+
+    // Assume all data is in C layout
+
+    // Get data from fortran
+    for (auto& d : SDS_f90) {
+      // expects data in C layout
+      sfc_fluxes(d);
+    }
+
+    // Get data from cxx
+    for (auto& d : SDS_cxx) {
+      d.transpose<ekat::TransposeDirection::c2f>();
+      // expects data in fortran layout
+      sfc_fluxes_f(d.shcol, d.num_tracer, d.dtime, d.rho_zi_sfc, d.rdp_zt_sfc,
+                   d.wthl_sfc, d.wqw_sfc, d.wtke_sfc, d.wtracer_sfc, d.thetal, d.qw,
+                   d.tke, d.wtracer);
+      d.transpose<ekat::TransposeDirection::f2c>();
+    }
+
+    // Verify BFB results, all data should be in C layout
+    for (Int i = 0; i < num_runs; ++i) {
+      SfcFluxesData& d_f90 = SDS_f90[i];
+      SfcFluxesData& d_cxx = SDS_cxx[i];
+
+      for (Int k = 0; k < d_f90.total(d_f90.thetal); ++k) {
+        REQUIRE(d_f90.thetal[k] == d_cxx.thetal[k]);
+        REQUIRE(d_f90.qw[k] == d_cxx.qw[k]);
+        REQUIRE(d_f90.tke[k] == d_cxx.tke[k]);
+      }
+
+      for (Int k = 0; k < d_f90.total(d_f90.wtracer); ++k) {
+        REQUIRE(d_f90.wtracer[k] == d_cxx.wtracer[k]);
+      }
+    }
   }
 };
 
