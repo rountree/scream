@@ -27,29 +27,6 @@ HommeDynamics::HommeDynamics (const ekat::Comm& comm, const ekat::ParameterList&
  : m_params        (params)
  , m_dynamics_comm (comm)
 {
-  // Init homme context par struct
-  if (!is_parallel_inited_f90()) {
-    auto comm_f = MPI_Comm_c2f(comm.mpi_comm());
-    init_parallel_f90(comm_f);
-  }
-
-  // Load homme params from namelist
-  if (!is_params_inited_f90()) {
-    auto nl_fname = m_params.get<std::string>("Homme namelist filename","namelist.nl");
-    const char* nl_fname_c = nl_fname.c_str();
-    init_params_f90(nl_fname_c);
-  }
-
-  // Init homme geometry structures
-  if (!is_geometry_inited_f90()) {
-    init_geometry_f90();
-  }
-
-  // Init prim structures
-  if (!is_data_structures_inited_f90()) {
-    prim_init_data_structures_f90 ();
-  }
-
   m_initializer = create_field_initializer<HommeInputsInitializer>();
 }
 
@@ -75,7 +52,7 @@ void HommeDynamics::set_grids (const std::shared_ptr<const GridsManager> grids_m
   const int ne = dyn_grid->get_num_local_dofs()/(NGP*NGP);
 
   // Sanity check for the grid. This should *always* pass, since Homme builds the grids
-  EKAT_REQUIRE_MSG(get_num_owned_elems_f90()==ne,
+  EKAT_REQUIRE_MSG(get_num_local_elems_f90()==ne,
                      "Error! The number of elements computed from the Dynamis grid num_dof()\n"
                      "       does not match the number of elements internal in Homme.\n");
   const int nmf = get_homme_param<int>("num momentum forcings");
@@ -118,6 +95,11 @@ void HommeDynamics::set_grids (const std::shared_ptr<const GridsManager> grids_m
 
 void HommeDynamics::initialize_impl (const util::TimeStamp& /* t0 */)
 {
+  // Init prim structures (should not be inited yet)
+  if (!is_data_structures_inited_f90()) {
+    prim_init_data_structures_f90 ();
+  }
+
   // We need to set the pointers in the C++ views to the ones contained in the scream
   // Fields *before* they ever get copied/filled. In particular, we need to make sure
   // that the Elements and Tracers structures contain scream Field's views before:
