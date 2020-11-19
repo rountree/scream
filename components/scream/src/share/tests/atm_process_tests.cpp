@@ -188,25 +188,34 @@ public:
 
 std::shared_ptr<UserProvidedGridsManager>
 setup_upgm (const int ne) {
+  ekat::Comm comm(MPI_COMM_WORLD);
+
   const int nelem = 6*ne*ne;
   const int np = 4;
   const int nvl = 128;
   const int ncols = 6*ne*ne*9 + 2;
 
-  ekat::Comm comm(MPI_COMM_WORLD);
+  int num_my_elems = nelem / comm.size();
+  int num_my_cols  = ncols / comm.size();
+  if (comm.rank() < (nelem % comm.size())) {
+    ++num_my_elems;
+  }
+  if (comm.rank() < (ncols % comm.size())) {
+    ++num_my_cols;
+  }
 
   // Note: our test does not use actual dof info, but we need to set these
   //       views in the SEGrid's, so that the num local dofs is set
-  SEGrid::dofs_list_type dyn_dofs("",nelem*np*np);
-  SEGrid::dofs_list_type phys_dofs("",ncols);
+  SEGrid::dofs_list_type dyn_dofs("",num_my_elems*np*np);
+  SEGrid::dofs_list_type phys_dofs("",num_my_cols);
 
-  SEGrid::lid_to_idx_map_type dyn_dofs_map ("",nelem*np*np,3);
-  SEGrid::lid_to_idx_map_type phys_dofs_map ("",ncols,1);
+  SEGrid::lid_to_idx_map_type dyn_dofs_map ("",num_my_elems*np*np,3);
+  SEGrid::lid_to_idx_map_type phys_dofs_map ("",num_my_cols,1);
 
   // Greate a grids manager
   auto upgm = std::make_shared<UserProvidedGridsManager>();
-  auto dummy_dyn_grid  = std::make_shared<SEGrid>("Dynamics",nelem,np,nvl);
-  auto dummy_phys_grid = std::make_shared<PointGrid>(create_point_grid("Physics",ncols,nvl,comm));
+  auto dummy_dyn_grid  = std::make_shared<SEGrid>("Dynamics",nelem,num_my_elems,np,nvl);
+  auto dummy_phys_grid = create_point_grid("Physics",ncols,nvl,comm);
   dummy_dyn_grid->set_dofs(dyn_dofs,dyn_dofs_map);
   upgm->set_grid(dummy_dyn_grid);
   upgm->set_grid(dummy_phys_grid);
