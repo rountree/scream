@@ -197,7 +197,7 @@ void AtmosphereDriver::finalize ( /* inputs? */ ) {
 void AtmosphereDriver::init_surface_coupling () {
 #if defined(SCREAM_CIME_BUILD)
   // If this is a CIME build, we need to prepare the surface coupling
-  m_surface_coupling = std::make_shared<SurfaceCoupling>(m_grids_manager->get_reference_grid());
+  m_surface_coupling = std::make_shared<SurfaceCoupling>(m_grids_manager->get_reference_grid(),*m_field_repo);
 #endif
 }
 
