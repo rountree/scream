@@ -80,7 +80,7 @@ public:
   // Query for a particular field or group of fields
   bool has_field (const identifier_type& identifier) const;
   const field_type& get_field (const identifier_type& identifier) const;
-  const field_type& get_field(const std::string name,const std::string grid) const;
+  const field_type& get_field(const std::string& name,const std::string& grid) const;
   const groups_map_type& get_field_groups () const { return m_field_groups; }
 
   // Iterators, to allow range for loops over the repo.
@@ -230,7 +230,7 @@ FieldRepository<RealType>::get_field (const identifier_type& id) const {
 
 template<typename RealType>
 const typename FieldRepository<RealType>::field_type&
-FieldRepository<RealType>::get_field (const std::string name, const std::string grid) const {
+FieldRepository<RealType>::get_field (const std::string& name, const std::string& grid) const {
   EKAT_REQUIRE_MSG(m_repo_state==RepoState::Closed,"Error! You are not allowed to grab fields from the repo until after the registration phase is completed.\n");
 
   // Keep track of the number of fields found for this name/grid combo
