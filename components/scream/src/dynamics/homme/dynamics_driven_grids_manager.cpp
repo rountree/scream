@@ -13,9 +13,22 @@ namespace scream
 {
 
 DynamicsDrivenGridsManager::
-DynamicsDrivenGridsManager (const ekat::Comm& /* comm */,
-                            const ekat::ParameterList& /* p */)
+DynamicsDrivenGridsManager (const ekat::Comm& comm,
+                            const ekat::ParameterList& p)
 {
+  if (!is_parallel_inited_f90()) {
+    // While we're here, we can init homme's parallel session
+    auto fcomm = MPI_Comm_c2f(comm.mpi_comm());
+    init_parallel_f90 (fcomm);
+  }
+
+  if (!is_params_inited_f90()) {
+    // While we're here, we can init homme's parameters
+    const auto& ddgm = p.sublist("Dynamics Driven");
+    auto nlname = ddgm.get<std::string>("Dynamics Namelist File Name").c_str();
+    init_params_f90 (nlname);
+  }
+
   // Valid names for the dyn grid
   auto& dgn = m_dyn_grid_aliases;
 
@@ -110,9 +123,6 @@ build_grids (const std::set<std::string>& grid_names,
       pgN = N;
     }
   }
-
-  // Nobody should have init-ed the geometries yet. So error out if someone did.
-  EKAT_REQUIRE_MSG (!is_geometry_inited_f90(), "Error! Geometry was somehow already init-ed.\n");
 
   init_grids_f90 (pgN);
 

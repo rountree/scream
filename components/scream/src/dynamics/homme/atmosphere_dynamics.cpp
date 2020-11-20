@@ -15,7 +15,10 @@
 // Scream includes
 #include "dynamics/homme/homme_dimensions.hpp"
 #include "dynamics/homme/homme_dynamics_helpers.hpp"
+
+#ifndef SCREAM_CIME_BUILD
 #include "dynamics/homme/homme_inputs_initializer.hpp"
+#endif
 
 #include "ekat/ekat_assert.hpp"
 #include "dynamics/homme/interface/scream_homme_interface.hpp"
@@ -27,7 +30,9 @@ HommeDynamics::HommeDynamics (const ekat::Comm& comm, const ekat::ParameterList&
  : m_params        (params)
  , m_dynamics_comm (comm)
 {
+#ifndef SCREAM_CIME_BUILD
   m_initializer = create_field_initializer<HommeInputsInitializer>();
+#endif
 }
 
 void HommeDynamics::set_grids (const std::shared_ptr<const GridsManager> grids_manager)
@@ -203,9 +208,11 @@ void HommeDynamics::initialize_impl (const util::TimeStamp& /* t0 */)
   }
 
   // Now that we set the correct pointers inside the Kokkos views, we can finish homme's initialization
-
   auto standalone = m_params.get<bool>("Initialize Inputs", false);
   if (standalone) {
+#ifdef SCREAM_CIME_BUILD
+    ekat::error::runtime_abort("Error! Homme should not initialize inputs in CIME builds.\n");
+#else
     m_initializer->initialize_fields();
     for (auto f : m_dyn_fields_in) {
       m_initializer->add_me_as_initializer(f.second);
@@ -214,6 +221,7 @@ void HommeDynamics::initialize_impl (const util::TimeStamp& /* t0 */)
     for (auto f : m_dyn_fields_out) {
       m_initializer->add_me_as_initializer(f.second);
     }
+#endif
   } else {
     // Some I/O routine must have loaded initial states. Homme needs those values
     // to complete the model initialization. So, leverage Homme functions that

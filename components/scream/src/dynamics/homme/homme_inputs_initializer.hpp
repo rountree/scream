@@ -8,7 +8,7 @@ namespace scream {
 class HommeInputsInitializer : public FieldInitializer
 {
 public:
-  using field_type       = Field<      Real>;
+  using field_type = Field<Real>;
 
   // Constructor(s) & Destructor
   virtual ~HommeInputsInitializer () = default;
