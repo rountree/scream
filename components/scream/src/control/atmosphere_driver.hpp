@@ -74,12 +74,13 @@ public:
   const std::shared_ptr<GridsManager>& get_grids_manager () const { return m_grids_manager; }
 
   // Inspect the atm dag, ensuring all dependencies are met
-  void inspect_atm_dag ();
+  void inspect_atm_dag () const;
 
 protected:
 
-  void init_surface_coupling ();
+  // Initialize atm input fields
   void init_atm_inputs ();
+
 #ifdef SCREAM_DEBUG
   void create_bkp_field_repo ();
 #endif
