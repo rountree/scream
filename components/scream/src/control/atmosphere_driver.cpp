@@ -118,14 +118,18 @@ void AtmosphereDriver::initialize (const ekat::Comm& atm_comm,
   for (const auto& id : inputs) {
     m_atm_process_group->set_required_field(m_field_repo->get_field(id).get_const());
   }
-  // Internal fields are fields that the atm proc group both computes and requires
-  // (in that order). These are present only in case of sequential splitting
-  for (const auto& id : m_atm_process_group->get_internal_fields()) {
-    m_atm_process_group->set_internal_field(m_field_repo->get_field(id));
-  }
   // Output fields are handed to the processes as writable
   for (const auto& id : outputs) {
     m_atm_process_group->set_computed_field(m_field_repo->get_field(id));
+  }
+  // Set all groups of fields
+  for (const auto& it : m_atm_process_group->get_required_groups()) {
+    auto group = m_field_repo->get_const_field_group(it.first,it.second);
+    m_atm_process_group->set_required_group(group);
+  }
+  for (const auto& it : m_atm_process_group->get_updated_groups()) {
+    auto group = m_field_repo->get_field_group(it.first,it.second);
+    m_atm_process_group->set_updated_group(group);
   }
 
   // Initialize the processes
@@ -210,7 +214,7 @@ void AtmosphereDriver::inspect_atm_dag () {
 
   // First, process the dag
   AtmProcDAG dag;
-  dag.create_dag(*m_atm_process_group);
+  dag.create_dag(*m_atm_process_group,m_field_repo);
 
   for (const auto& it : m_field_initializers) {
     dag.add_field_initializer(*it.lock());
