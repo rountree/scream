@@ -1,6 +1,6 @@
 #ifndef P3_FUNCTIONS_HPP
 #define P3_FUNCTIONS_HPP
-
+#include <iostream>
 #include "physics/share/physics_constants.hpp"
 
 #include "share/scream_types.hpp"
@@ -111,7 +111,14 @@ struct Functions
     view_2d<Spack> qv;
     // Potential temperature [K]
     view_2d<Spack> th;
+
+    // Fixme: convert struct to iterator?
+    inline void dump(){
+      qc.dump("qc"); nc.dump("nc"); qr.dump("qr"); nr.dump("nr"); qi.dump("qi"); 
+      qm.dump("qm"); ni.dump("ni"); bm.dump("bm"); qv.dump("qv"); th.dump("th");
+    };
   };
+
 
   // This struct stores diagnostic variables used by P3.
   struct P3DiagnosticInputs {
@@ -141,6 +148,23 @@ struct Functions
     view_2d<const Spack> qv_prev;
     // T from previous step [K]
     view_2d<const Spack> t_prev;
+
+    inline void dump(){
+	    nc_nuceat_tend.dump("nc_nuceat_tend"); 
+	    nccn.dump("nccn"); 
+	    ni_activated.dump("ni_activated");
+	    inv_qc_relvar.dump("inv_qc_relvar");   
+	    cld_frac_i.dump("cld_frac_i");
+	    cld_frac_l.dump("cld_frac_l");
+	    cld_frac_r.dump("cld_frac_r");
+	    pres.dump("pres");
+	    dz.dump("dz");
+	    dpres.dump("dpres");
+	    exner.dump("exner");
+	    qv_prev.dump("qv_prev");
+	    t_prev.dump("t_prev");
+    };
+
   };
 
   // This struct stores diagnostic outputs computed by P3.
@@ -171,6 +195,21 @@ struct Functions
     view_2d<Spack> precip_liq_flux;
     // Grid-box average ice/snow flux [kg m^-2 s^-1] pverp
     view_2d<Spack> precip_ice_flux;
+
+    inline void dump(){
+	    mu_c.dump("mu_c");
+	    lamc.dump("lamc");
+	    qv2qi_depos_tend.dump("qv2qi_pdeos_tend");
+	    precip_liq_surf.dump("precip_liq_surf");
+	    diag_eff_radius_qc.dump("diag_eff_radius_qc");
+	    diag_eff_radius_qi.dump("diag_eff_radius_qi");
+	    rho_qi.dump("rho_qi");
+	    precip_total_tend.dump("precip_total_tend");
+	    nevapr.dump("nevapr");
+	    qr_evap_tend.dump("qr_evap_tend");
+	    precip_liq_flux.dump("precip_liq_flux");
+	    precip_ice_flux.dump("precip_ice_flux");
+    };
   };
 
   // This struct stores time stepping and grid-index-related information.
@@ -204,6 +243,12 @@ struct Functions
     view_2d<Spack> vap_liq_exchange;
     // Sum of vap-ice phase change tendencies
     view_2d<Spack> vap_ice_exchange;
+
+    inline void dump(){
+	liq_ice_exchange.dump("liq_ice_exchange");
+	vap_liq_exchange.dump("vap_liq_exchange");
+	vap_ice_exchange.dump("vap_ice_exchange");
+    };
   };
 
   // -- Table3 --

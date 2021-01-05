@@ -335,13 +335,16 @@ void P3Microphysics::run_impl (const Real dt)
 // to here.
   // Pack our data into structs and ship it off to p3_main.
   P3F::P3PrognosticState prog_state{ qc, nc, qr, nr, qi, qm, ni, bm, qv, th_atm };
+  prog_state.dump();
   P3F::P3DiagnosticInputs diag_inputs{ nc_nuceat_tend, nccn_prescribed, ni_activated, inv_qc_relvar, 
                                        cld_frac_i, cld_frac_l, cld_frac_r, pmid, dz, dp, exner, qv_prev, T_prev };
   P3F::P3DiagnosticOutputs diag_outputs{ mu_c, lamc, qv2qi_depos_tend, precip_liq_surf,
                                          precip_ice_surf, diag_eff_radius_qc, diag_eff_radius_qi, rho_qi,
                                          precip_total_tend, nevapr, qr_evap_tend, precip_liq_flux, precip_ice_flux };
+  diag_outputs.dump();
   P3F::P3Infrastructure infrastructure{ dt, m_it, its, ite, kts, kte, do_predict_nc, do_prescribed_CCN, col_location };
   P3F::P3HistoryOnly history_only{ liq_ice_exchange, vap_liq_exchange, vap_ice_exchange };
+  history_only.dump();
 
   auto elapsed_microsec = P3F::p3_main(prog_state, diag_inputs, diag_outputs, infrastructure,
                                        history_only, m_num_cols, m_num_levs);
