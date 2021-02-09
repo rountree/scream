@@ -24,5 +24,8 @@ buildnmlc
 buildlibc
 buildlib_cmakec
 
-# Ignore emacs backup files
+# Ignore emacs and vi backup files
 *~
+.*.swp
+
+
