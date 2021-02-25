@@ -168,6 +168,9 @@ public:
         "\nSomething is wrong up the call stack. Please, contact developers.\n");
     set_computed_field_impl (f);
   }
+  void set_perturbable_field (const Field<Real>& f) {
+    set_perturbable_field_impl (f);
+  }
 
   // Note: for the following (unlike set_required/computed_field, we do provide an
   //       implementation, since requiring a group is "rare".
@@ -260,8 +263,9 @@ protected:
     f.get_header_ptr()->get_tracking().add_customer(weak_from_this());
   }
 
-  virtual void set_required_field_impl (const Field<const Real>& f) = 0;
-  virtual void set_computed_field_impl (const Field<      Real>& f) = 0;
+  virtual void set_required_field_impl    (const Field<const Real>& f) = 0;
+  virtual void set_computed_field_impl    (const Field<      Real>& f) = 0;
+  virtual void set_perturbable_field_impl (const Field<      Real>& f) = 0;
 
 private:
 

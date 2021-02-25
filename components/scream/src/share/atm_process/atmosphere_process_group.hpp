@@ -107,6 +107,7 @@ protected:
   // The methods to set the fields in the process
   void set_required_field_impl (const Field<const Real>& f);
   void set_computed_field_impl (const Field<      Real>& f);
+  void set_perturbable_field_impl (const Field<   Real>& f);
 
   // Method to build the identifier of a field on the reference grid given
   // an identifier on a different grid
@@ -133,8 +134,10 @@ protected:
   ScheduleType   m_group_schedule_type;
 
   // The cumulative set of required/computed fields of the atm processes in the group
+  // m_perturbable_fields holds a union of both, except the fields modifiable.
   std::set<FieldIdentifier>      m_required_fields;
   std::set<FieldIdentifier>      m_computed_fields;
+  std::set<FieldIdentifier>      m_perturbable_fields;
 
   // The remappers are to map output/input fields to/from the reference grid
   // Note: the i-th entry of the vector is a map of remappers needed by the i-th process.

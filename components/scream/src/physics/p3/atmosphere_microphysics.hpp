@@ -65,8 +65,9 @@ public:
   void register_fields (FieldRepository<Real>& field_repo) const;
 
   // Get the set of required/computed fields
-  const std::set<FieldIdentifier>& get_required_fields () const { return m_required_fields; }
-  const std::set<FieldIdentifier>& get_computed_fields () const { return m_computed_fields; }
+  const std::set<FieldIdentifier>& get_required_fields  () const { return m_required_fields; }
+  const std::set<FieldIdentifier>& get_computed_fields  () const { return m_computed_fields; }
+  const std::set<FieldIdentifier>& get_perturbed_fields () const { return m_perturbed_fields; }
 
   /*--------------------------------------------------------------------------------------------*/
   // Most individual processes have a pre-processing step that constructs needed variables from
@@ -222,11 +223,13 @@ protected:
   void finalize_impl   ();
 
   // Setting the fields in the atmospheric process
-  void set_required_field_impl (const Field<const Real>& f);
-  void set_computed_field_impl (const Field<      Real>& f);
+  void set_required_field_impl    (const Field<const Real>& f);
+  void set_computed_field_impl    (const Field<      Real>& f);
+  void set_perturbable_field_impl (const Field<      Real>& f);
 
   std::set<FieldIdentifier> m_required_fields;
   std::set<FieldIdentifier> m_computed_fields;
+  std::set<FieldIdentifier> m_perturbed_fields;
 
   std::map<std::string,const_field_type>  m_p3_fields_in;
   std::map<std::string,field_type>        m_p3_fields_out;
@@ -237,14 +240,17 @@ protected:
   template<typename T>
   using host_view_type = field_type::get_view_type<view_type<T>,Host>;
 
-  using host_view_in_type   = host_view_type<const_field_type::RT>;
-  using host_view_out_type  = host_view_type<      field_type::RT>;
+  using host_view_in_type           = host_view_type<const_field_type::RT>;
+  using host_view_out_type          = host_view_type<      field_type::RT>;
+  using host_view_perturbable_type  = host_view_type<      field_type::RT>;
 
   std::map<std::string,host_view_in_type>   m_p3_host_views_in;
   std::map<std::string,host_view_out_type>  m_p3_host_views_out;
+  std::map<std::string,host_view_perturbable_type>  m_p3_host_views_perturbable;
 
   std::map<std::string,const Real*>  m_raw_ptrs_in;
   std::map<std::string,Real*>        m_raw_ptrs_out;
+  std::map<std::string,Real*>        m_raw_ptrs_perturbable;
 
   // Used to init some fields. For now, only needed for stand-alone p3 runs
   std::shared_ptr<FieldInitializer>  m_initializer;

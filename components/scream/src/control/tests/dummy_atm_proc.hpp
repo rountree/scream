@@ -196,6 +196,7 @@ protected:
   void set_computed_field_impl (const Field<Real>& f) {
     m_outputs[f.get_header().get_identifier().name()] = f;
   }
+  void set_perturbable_field_impl (const Field<Real>& /*f*/) {};
 
   std::set<FieldIdentifier> m_input_fids;
   std::set<FieldIdentifier> m_output_fids;

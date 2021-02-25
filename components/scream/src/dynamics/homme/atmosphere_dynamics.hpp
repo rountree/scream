@@ -65,8 +65,9 @@ protected:
   void finalize_impl   (/* what inputs? */);
 
   // Setting the fields in the atmosphere process
-  void set_required_field_impl (const Field<const Real>& f);
-  void set_computed_field_impl (const Field<      Real>& f);
+  void set_required_field_impl    (const Field<const Real>& f);
+  void set_computed_field_impl    (const Field<      Real>& f);
+  void set_perturbable_field_impl (const Field<      Real>& /*f*/){};
 
   std::set<FieldIdentifier> m_required_fields;
   std::set<FieldIdentifier> m_computed_fields;

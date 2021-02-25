@@ -475,6 +475,15 @@ void AtmosphereProcessGroup::set_computed_field_impl (const Field<Real>& f) {
   }
 }
 
+void AtmosphereProcessGroup::set_perturbable_field_impl (const Field<Real>& f ){
+  const auto& fid = f.get_header().get_identifier();
+  for (auto atm_proc : m_atm_processes) {
+    if ( atm_proc->computes(fid) || atm_proc->requires(fid) ) {
+      atm_proc->set_perturbable_field(f);
+    }
+  }
+}
+
 #ifdef SCREAM_DEBUG
 void AtmosphereProcessGroup::
 set_field_repos (const FieldRepository<Real>& repo,

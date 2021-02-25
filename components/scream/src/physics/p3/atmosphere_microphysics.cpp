@@ -377,4 +377,15 @@ void P3Microphysics::set_computed_field_impl (const Field<      Real>& f) {
   add_me_as_provider(f);
 }
 
+void P3Microphysics::set_perturbable_field_impl (const Field<      Real>& f) {
+  const auto& name = f.get_header().get_identifier().name();
+  m_p3_fields_out.emplace(name,f);
+  m_p3_host_views_perturbable[name] = f.get_view<Host>();
+  m_raw_ptrs_perturbable[name] = m_p3_host_views_perturbable[name].data();
+
+  // Add myself as provider for the field
+  // add_me_as_provider(f);
+}
+
+
 } // namespace scream

@@ -118,11 +118,14 @@ void AtmosphereDriver::initialize (const ekat::Comm& atm_comm,
   const auto& outputs = m_atm_process_group->get_computed_fields();
   for (const auto& id : inputs) {
     m_atm_process_group->set_required_field(m_field_repo->get_field(id).get_const());
+    m_atm_process_group->set_perturbable_field(m_field_repo->get_field(id));
   }
   // Output fields are handed to the processes as writable
   for (const auto& id : outputs) {
     m_atm_process_group->set_computed_field(m_field_repo->get_field(id));
+    m_atm_process_group->set_perturbable_field(m_field_repo->get_field(id));
   }
+
   // Set all groups of fields
   for (const auto& it : m_atm_process_group->get_required_groups()) {
     auto group = m_field_repo->get_const_field_group(it.name,it.grid);
