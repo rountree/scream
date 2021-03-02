@@ -295,6 +295,22 @@ void P3Microphysics::run_impl (const Real dt)
   infrastructure.dt = dt;
   infrastructure.it++;
 
+  // BARRY FUCKING AROUND.
+  std::cout << "prog_state" << "\n";
+  //std::cout << " qc " << prog_state.qc.size() << " " << m_p3_fields_perturbable["qc"].get_view<Host>().size() << "\n";
+  std::cout << " qc " << prog_state.qc.size() << " " << m_p3_fields_perturbable["qc"].get_view().size() << "\n";
+
+  /*
+  for( auto const& it : m_p3_fields_perturbable ){
+	  const std::string& 		name 	= it.first;
+	  const Field< Real >& 		field 	= it.second;
+	  host_view_perturbable_type 	view	= field.get_view<Host>();
+	  const auto 			size	= view.size();
+	  std::cout << name << "  " << size << " " << view[size-1] << "\n";
+  }
+  */
+  std::cout << "\n";
+
   // Run p3 main
   P3F::p3_main(prog_state, diag_inputs, diag_outputs, infrastructure,
                                        history_only, m_num_cols, m_num_levs);
@@ -379,12 +395,7 @@ void P3Microphysics::set_computed_field_impl (const Field<      Real>& f) {
 
 void P3Microphysics::set_perturbable_field_impl (const Field<      Real>& f) {
   const auto& name = f.get_header().get_identifier().name();
-  m_p3_fields_out.emplace(name,f);
-  m_p3_host_views_perturbable[name] = f.get_view<Host>();
-  m_raw_ptrs_perturbable[name] = m_p3_host_views_perturbable[name].data();
-
-  // Add myself as provider for the field
-  // add_me_as_provider(f);
+  m_p3_fields_perturbable.emplace(name,f);
 }
 
 

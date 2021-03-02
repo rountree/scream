@@ -233,6 +233,7 @@ protected:
 
   std::map<std::string,const_field_type>  m_p3_fields_in;
   std::map<std::string,field_type>        m_p3_fields_out;
+  std::map<std::string,field_type>        m_p3_fields_perturbable;
 
   template<typename T>
   using view_type = field_type::view_type<T*>;
@@ -246,11 +247,12 @@ protected:
 
   std::map<std::string,host_view_in_type>   m_p3_host_views_in;
   std::map<std::string,host_view_out_type>  m_p3_host_views_out;
-  std::map<std::string,host_view_perturbable_type>  m_p3_host_views_perturbable;
+//  std::map<std::string,host_view_perturbable_type>  m_p3_host_views_perturbable;
 
   std::map<std::string,const Real*>  m_raw_ptrs_in;
   std::map<std::string,Real*>        m_raw_ptrs_out;
-  std::map<std::string,Real*>        m_raw_ptrs_perturbable;
+ // std::map<std::string,Real*>        m_raw_ptrs_perturbable;
+  std::map<std::string,int>          m_raw_sz;
 
   // Used to init some fields. For now, only needed for stand-alone p3 runs
   std::shared_ptr<FieldInitializer>  m_initializer;
