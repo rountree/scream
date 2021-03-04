@@ -8,6 +8,9 @@
 #include "physics/share/physics_functions.hpp" // also for ETI not on GPUs 
 
 #include <string>
+#include <iostream>
+#include <fstream>
+#include <ios>
 
 namespace scream
 {
@@ -247,7 +250,7 @@ protected:
 
   std::map<std::string,host_view_in_type>   m_p3_host_views_in;
   std::map<std::string,host_view_out_type>  m_p3_host_views_out;
-//  std::map<std::string,host_view_perturbable_type>  m_p3_host_views_perturbable;
+  std::map<std::string,host_view_perturbable_type>  m_p3_host_views_perturbable;
 
   std::map<std::string,const Real*>  m_raw_ptrs_in;
   std::map<std::string,Real*>        m_raw_ptrs_out;
@@ -276,6 +279,25 @@ protected:
   p3_postamble             p3_postproc;
   // Iteration count is internal to P3 and keeps track of the number of times p3_main has been called.
   // infrastructure.it is passed as an arguement to p3_main and is used for identifying which iteration an error occurs. 
+
+  void perturb_perturbables(){
+
+  }
+
+  void dump_perturbables(){
+	  for( auto const& x : m_p3_fields_perturbable ){
+		  std::basic_ofstream<char> of;
+		  const std::string name = x.first; 
+		  const int sz = x.second.get_header().get_identifier().get_layout().size();
+
+		  of.open( name+".R", std::ios_base::out | std::ios_base::app );
+		  for( int i=0; i<sz; i++ ){
+			  of << m_p3_host_views_perturbable[name](i) << " ";
+		  }
+		  of << "\n"; 
+		  of.close();
+	  }
+  }
 
 }; // class P3Microphysics
 

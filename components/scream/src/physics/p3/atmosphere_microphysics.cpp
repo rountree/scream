@@ -295,25 +295,14 @@ void P3Microphysics::run_impl (const Real dt)
   infrastructure.dt = dt;
   infrastructure.it++;
 
-  // BARRY FUCKING AROUND.
-  std::cout << "prog_state" << "\n";
-  //std::cout << " qc " << prog_state.qc.size() << " " << m_p3_fields_perturbable["qc"].get_view<Host>().size() << "\n";
-  std::cout << " qc " << prog_state.qc.size() << " " << m_p3_fields_perturbable["qc"].get_view().size() << "\n";
-
-  /*
-  for( auto const& it : m_p3_fields_perturbable ){
-	  const std::string& 		name 	= it.first;
-	  const Field< Real >& 		field 	= it.second;
-	  host_view_perturbable_type 	view	= field.get_view<Host>();
-	  const auto 			size	= view.size();
-	  std::cout << name << "  " << size << " " << view[size-1] << "\n";
-  }
-  */
-  std::cout << "\n";
+  perturb_perturbables();
+  dump_perturbables();
 
   // Run p3 main
   P3F::p3_main(prog_state, diag_inputs, diag_outputs, infrastructure,
                                        history_only, m_num_cols, m_num_levs);
+
+  dump_perturbables();
 
   // Conduct the post-processing of the p3_main output.
   Kokkos::parallel_for(
@@ -377,6 +366,11 @@ void P3Microphysics::set_required_field_impl (const Field<const Real>& f) {
 
   // Add myself as customer to the field
   add_me_as_customer(f);
+  /*
+  std::cout << "Req name=" << name << " size=" << 
+	  m_p3_fields_in[name].get_view().size() << 
+	  std::cout << " " << f.get_view().size() << "\n";
+	  */
 }
 
 void P3Microphysics::set_computed_field_impl (const Field<      Real>& f) {
@@ -391,11 +385,32 @@ void P3Microphysics::set_computed_field_impl (const Field<      Real>& f) {
 
   // Add myself as provider for the field
   add_me_as_provider(f);
+  /*
+  std::cout << "Com name=" << name << " size=" << 
+	  m_p3_fields_out[name].get_view().size() << 
+	  std::cout << " " << f.get_view().size() << "\n";
+	  */
 }
 
 void P3Microphysics::set_perturbable_field_impl (const Field<      Real>& f) {
   const auto& name = f.get_header().get_identifier().name();
   m_p3_fields_perturbable.emplace(name,f);
+  m_p3_host_views_perturbable[name] = f.get_view<Host>();
+/*
+  std::cout << "field: name="    << f.get_header().get_identifier().name()
+	    << ", size="  << f.get_header().get_identifier().get_layout().size()
+	    << ", rank="  << f.get_header().get_identifier().get_layout().rank()
+	    << ", dims="  << f.get_header().get_identifier().get_layout().dims()
+//	    << ", " << m_p3_host_views_perturbable[name](0)
+	    << ".\n"
+	    << "view: size=" << m_p3_host_views_perturbable[name].size() 
+	    << "  
+  for( int i=0; i<f.get_header().get_identifier().get_layout().size(); i++ ){
+	std::cout <<  m_p3_host_views_perturbable[name](i) << " ";
+  }
+  std::cout << "\n";
+	*/
+
 }
 
 
